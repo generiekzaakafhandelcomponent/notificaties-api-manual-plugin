@@ -100,7 +100,8 @@ Backend:
    (`getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = "notificatiesapi-manual"))`).
    Kanaal filters per Open Notificaties URL group: this plugin's `receive-notificatie` links whose
    `pluginConfigurationId` is an Automatic configuration of that group; links with a null `pluginConfigurationId`
-   (building blocks) go into every Automatic group (as core does) and never into a Manual view. Deviation from #971,
+   (building blocks) would go into every Automatic group, but core's link query (an inner join on the plugin
+   configuration) never returns them, so building-block `receive-notificatie` links work neither in core nor here. Deviation from #971,
    which adds every non-Manual link to every group. Same retry/backoff, same
    AFTER_COMMIT + REQUIRES_NEW handling, own executor and properties. Same #971 rules: Manual configurations are never
    registered/updated/deleted; Automatic stale cleanup deletes nothing on an Open Notificaties URL that also has a
@@ -120,8 +121,9 @@ Backend:
    abonnement deleted and their link removed; a failing remote delete is logged with the abonnement URL. Links saved
    during a sweep are added to its snapshot, so a later URL group never takes them for stale. Only the owner's
    `authHeader` is used for the group's abonnement (documented).
-   Event-triggered sweeps catch and log failures, so an unreachable Open Notificaties never turns an unrelated save
-   (process link, core configuration) into a 500 after its commit.
+   Event-triggered sweeps run on the plugin's single registration thread, never on the request thread and never two at
+   a time; events that arrive while a sweep is pending share it (a case import with N links gives one sweep, not N).
+   Failures are logged, so an unreachable Open Notificaties never turns an unrelated save into a 500.
    Changed `authHeader`: Open Notificaties never returns `auth` (write-only), so the "unchanged" check compares the
    desired key with the `auth` stored in this plugin's link row, not with the API response. Different → update.
    Comparing with the API response would send a PUT on every sweep, and every PUT makes Open Notificaties call the
@@ -172,7 +174,8 @@ Frontend (`@valtimo-plugins/notificaties-api-manual`): copy of the #971 core fro
 `notificatiesapi-manual`, renamed classes/selectors (see names table), the service pointing at the
 fork endpoint, own test ids, translations (nl/en/de; every language must have every key, Valtimo has no fallback) with the title above and the callback placeholder
 `https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback`. Components: configuration (with registration
-select, shared secret, manual panel), `publish-notificatie`, `receive-notificatie`. The manual panel text also says
+select, shared secret, manual panel). The `publish-notificatie` and `receive-notificatie` action forms are core's
+(`@valtimo/plugin` exports them; they take their texts from this plugin's translations via `pluginId`); the logo too. The manual panel text also says
 that kanalen of core Notificaties API listeners on the same URL are included.
 
 ## Branch `v12` (Valtimo 12)
@@ -249,6 +252,18 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
 - Left over (not fixed): one unreachable Open Notificaties stops the sweep for later URL groups (inherited from core);
   no IT that runs a `receive-notificatie` link through the real inbound queue (unit-tested only); no permanent v12 IT
   for an id change (verified by the breaker, unit-tested in the listener).
+- Round 2 (v12, no mustFix), left over: a numeric `authHeader` in a `.pluginconfig.json` is accepted but never matches
+  (read with `textValue()`); the core-callback-path check compares the string suffix, so a query, fragment or other
+  case bypasses it; template-wide publishing: `cn.lalaki.central` leaks into the published runtime dependencies and the
+  jar has a `plain` classifier (also in the sibling plugins).
+- `/simplify`: core's action forms, `ReceiveNotificatieProperties`, plugin key constants, logo and (v12)
+  `DEFAULT_KANALEN_NAMES` reused instead of copied; one helper reads stored configuration properties; event sweeps
+  coalesced on the registration thread. Skipped: one abonnement per automatic configuration (design change), dropping
+  the v12 callback separation (decision above), dropping the #971 "no cleanup next to a manual configuration" rule,
+  caching v12 callback lookups (v12 has no configuration create/update events to keep a cache in sync).
+- Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
+  fit the 255-character link column (as core); the startup sweep and an event sweep can run at the same time and both
+  create an abonnement (as core); the manual view shows the "save first" hint for any error, not only 404.
 
 ## Risks
 
@@ -264,11 +279,13 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   definition publishes no delete event; those filters reach an Automatic abonnement on the next trigger or restart (as
   core). A case import publishes one event per link, so it triggers one sweep per link (as core). Documented.
 - Validation also runs on autodeploy: a `.pluginconfig.json` that breaks a rule (callback shared with core, Manual and
-  Automatic sharing a callback, a `Bearer…` secret) stops startup, as any invalid plugin configuration does.
-  Documented. On v12 the Manual/Automatic callback separation is kept although v12 has no stale cleanup: it keeps the
+  Automatic sharing a callback, a `Bearer…` secret) stops startup on Valtimo 13, as any invalid plugin configuration
+  does; on Valtimo 12 the configuration (and the rest of that file) is skipped and logged. Documented.
+- Valtimo 12: a configuration whose authentication configuration was deleted can't be deleted (core instantiates the
+  plugin for the DELETE event, as for the standard plugin). Documented. On v12 the Manual/Automatic callback separation is kept although v12 has no stale cleanup: it keeps the
   configurations the same on both lines and costs nothing.
-- Core building-block `receive-notificatie` links (null configuration id) are not in the manual view, so behind the
-  gateway they get no kanaal. Documented.
+- Building-block `receive-notificatie` links (null configuration id) don't work, in core nor in this plugin: core's
+  link query never returns them. Documented.
 - Inherited from core, documented, not fixed: several pods starting at once with an Automatic configuration and no
   link can create duplicate abonnementen (one may be orphaned or deleted by the other's cleanup) — start one pod first;
   changing a configuration's `url` leaves the old abonnement in the old Open Notificaties; concurrent duplicate

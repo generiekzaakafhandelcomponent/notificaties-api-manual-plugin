@@ -18,6 +18,7 @@ package com.ritense.valtimoplugins.notificatiesapimanual.plugin
 
 import com.ritense.logging.withLoggingContext
 import com.ritense.notificatiesapi.NotificatiesApiAuthentication
+import com.ritense.notificatiesapi.NotificatiesApiPlugin
 import com.ritense.notificatiesapi.client.NotificatiesApiClient
 import com.ritense.notificatiesapi.domain.Abonnement
 import com.ritense.notificatiesapi.domain.Kanaal
@@ -41,13 +42,14 @@ import org.springframework.web.client.HttpClientErrorException
 import java.net.URI
 import java.security.SecureRandom
 import java.util.Base64
+import java.util.UUID
 
 /**
  * Copy of the Valtimo 12 core Notificaties API plugin (key `notificatiesapi`) under its own key, with manual abonnement
  * registration (gzac-issues#971) added. Notificaties it receives go into core's inbound queue, so every existing
  * consumer of `NotificatiesApiNotificationReceivedEvent` gets them.
  *
- * As in v12 core, the abonnement is registered from the plugin events, with the fixed kanaal [KANAAL]. There is one
+ * As in v12 core, the abonnement is registered from the plugin events, with core's fixed kanalen ([KANALEN]). There is one
  * event method per event type, which validates before it calls Open Notificaties: plugin events run in no defined
  * order, and an abonnement created before a failing validation would stay behind in Open Notificaties.
  */
@@ -104,24 +106,24 @@ class NotificatiesApiManualPlugin(
                 link?.let { linkRepository.delete(it) }
                 return@withLoggingContext
             }
-            if (link == null) {
-                createAbonnement(currentKey = null)
-                return@withLoggingContext
-            }
             val current =
-                try {
-                    client.getAbonnement(authenticationPluginConfiguration, url, link.getAbonnementId())
-                } catch (e: HttpClientErrorException.NotFound) {
-                    logger.info { "Abonnement '${link.url}' no longer exists in Open Notificaties; creating a new one" }
-                    null
+                link?.let {
+                    try {
+                        client.getAbonnement(authenticationPluginConfiguration, url, it.getAbonnementId())
+                    } catch (e: HttpClientErrorException.NotFound) {
+                        logger.info {
+                            "Abonnement '${it.url}' no longer exists in Open Notificaties; creating a new one"
+                        }
+                        null
+                    }
                 }
-            if (current == null) {
-                createAbonnement(currentKey = link.auth)
+            if (link == null || current == null) {
+                createAbonnement(currentKey = link?.auth)
                 return@withLoggingContext
             }
             val key = desiredKey(link.auth)
             // Open Notificaties never returns auth, so the key it has is the one stored in the link.
-            if (current.equals(link.url, callbackUrl.toASCIIString(), setOf(KANAAL)) && link.auth == key) {
+            if (current.equals(link.url, callbackUrl.toASCIIString(), KANALEN) && link.auth == key) {
                 logger.debug { "Skipping abonnement update; nothing changed" }
                 return@withLoggingContext
             }
@@ -152,45 +154,50 @@ class NotificatiesApiManualPlugin(
         }
 
     fun validateConfiguration() {
-        val secret = authHeader
-        if (isManualAbonnementRegistration() && secret.isNullOrBlank()) {
+        authHeader?.let { secret ->
+            // Valtimo's JWT filter and Spring's bearer token resolver take such a header as a (malformed) token.
+            if (secret.startsWith("bearer", ignoreCase = true)) {
+                throw ValidationException("The shared secret (authHeader) must not start with 'Bearer'")
+            }
+            // HTTP strips whitespace around header values, so such a secret could never match.
+            if (secret.isNotBlank() && secret != secret.trim()) {
+                throw ValidationException("The shared secret (authHeader) must not start or end with whitespace")
+            }
+            // Open Notificaties sends header values as Latin-1; plain printable ASCII is safe on every hop.
+            if (secret.any { it !in ' '..'~' }) {
+                throw ValidationException("The shared secret (authHeader) may only contain printable ASCII characters")
+            }
+            if (secret.length > MAX_AUTH_HEADER_LENGTH) {
+                throw ValidationException(
+                    "The shared secret (authHeader) must be at most $MAX_AUTH_HEADER_LENGTH characters",
+                )
+            }
+        }
+        if (isManualAbonnementRegistration() && authHeader.isNullOrBlank()) {
             throw ValidationException(
                 "A shared secret (authHeader) is required when the abonnement is registered manually",
             )
         }
-        // Valtimo's JWT filter and Spring's bearer token resolver take such a header as a (malformed) token.
-        if (secret != null && secret.startsWith("bearer", ignoreCase = true)) {
-            throw ValidationException("The shared secret (authHeader) must not start with 'Bearer'")
-        }
-        if (secret != null && secret.isNotBlank() && secret != secret.trim()) {
-            // HTTP strips whitespace around header values, so such a secret could never match.
-            throw ValidationException("The shared secret (authHeader) must not start or end with whitespace")
-        }
-        // Open Notificaties sends header values as Latin-1; plain printable ASCII is safe on every hop.
-        if (secret != null && secret.any { it !in ' '..'~' }) {
-            throw ValidationException("The shared secret (authHeader) may only contain printable ASCII characters")
-        }
-        if (secret != null && secret.length > MAX_AUTH_HEADER_LENGTH) {
-            throw ValidationException(
-                "The shared secret (authHeader) must be at most $MAX_AUTH_HEADER_LENGTH characters",
-            )
-        }
+        val callback = normalize(callbackUrl)
         // Core's endpoint only accepts core's own keys, so every notificatie would get 401 there.
-        if (normalize(callbackUrl).endsWith(CORE_CALLBACK_PATH)) {
+        if (callback.endsWith(CORE_CALLBACK_PATH)) {
             throw ValidationException(
                 "The callback URL points at core's endpoint; use /api/v1/notificatiesapi-manual/callback",
             )
         }
-        if (coreCallbackUrls(pluginService).contains(normalize(callbackUrl))) {
+        if (callback in coreCallbackUrls(pluginService)) {
             throw ValidationException(
                 "The callback URL is already used by a core Notificaties API configuration; " +
                     "use this plugin's callback endpoint (/api/v1/notificatiesapi-manual/callback)",
             )
         }
+        // Automatic stale cleanup must be able to tell an administrator's abonnement from a stale one.
         val clashing =
-            otherConfigurationsOfThisPlugin()
-                .filter { it.manual != isManualAbonnementRegistration() }
-                .any { it.callbackUrl == normalize(callbackUrl) }
+            storedRegistrations(pluginService).any {
+                it.id != configurationId.id &&
+                    it.manual != isManualAbonnementRegistration() &&
+                    it.callbackUrl == callback
+            }
         if (clashing) {
             throw ValidationException(
                 "A manual and an automatic configuration can't share a callback URL; use " +
@@ -199,7 +206,7 @@ class NotificatiesApiManualPlugin(
         }
     }
 
-    fun kanalen() = listOf(Abonnement.Kanaal(naam = KANAAL))
+    fun kanalen() = KANALEN.map { Abonnement.Kanaal(naam = it) }
 
     private fun createAbonnement(currentKey: String?) {
         val key = desiredKey(currentKey)
@@ -218,35 +225,18 @@ class NotificatiesApiManualPlugin(
         authHeader?.takeIf { it.isNotBlank() } ?: currentKey?.takeIf { it.isNotBlank() } ?: createRandomKey()
 
     private fun ensureKanaalExists() {
-        if (client.getKanalen(authenticationPluginConfiguration, url).none { it.naam == KANAAL }) {
-            client.createKanaal(authenticationPluginConfiguration, url, Kanaal(naam = KANAAL))
-        }
+        val existing = client.getKanalen(authenticationPluginConfiguration, url).map { it.naam }
+        KANALEN
+            .filter {
+                it !in existing
+            }.forEach { client.createKanaal(authenticationPluginConfiguration, url, Kanaal(naam = it)) }
     }
-
-    private fun otherConfigurationsOfThisPlugin(): List<StoredRegistration> =
-        pluginService
-            .getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = PLUGIN_KEY))
-            .filter { it.id.id != configurationId.id }
-            .map { configuration ->
-                val properties = configuration.properties
-                StoredRegistration(
-                    manual =
-                        properties?.path(ABONNEMENT_REGISTRATION_PROPERTY)?.textValue() ==
-                            AbonnementRegistration.MANUAL.value,
-                    callbackUrl = properties?.path(CALLBACK_URL_PROPERTY)?.textValue()?.let { normalize(it) },
-                )
-            }
 
     private fun createRandomKey(): String {
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
         return Base64.getEncoder().encodeToString(bytes)
     }
-
-    private class StoredRegistration(
-        val manual: Boolean,
-        val callbackUrl: String?,
-    )
 
     companion object {
         private val logger = KotlinLogging.logger {}
@@ -258,8 +248,8 @@ class NotificatiesApiManualPlugin(
         const val CALLBACK_URL_PROPERTY = "callbackUrl"
         const val MAX_AUTH_HEADER_LENGTH = 255
 
-        /** The only kanaal Valtimo 12 core registers, without filters. */
-        const val KANAAL = "objecten"
+        /** The kanalen Valtimo 12 core registers (`objecten`), without filters. */
+        val KANALEN: Set<String> = NotificatiesApiPlugin.DEFAULT_KANALEN_NAMES
 
         fun normalize(url: URI): String = normalize(url.toString())
 
@@ -272,5 +262,31 @@ class NotificatiesApiManualPlugin(
                 .mapNotNull { it.properties?.path(CALLBACK_URL_PROPERTY)?.textValue() }
                 .map { normalize(it) }
                 .toSet()
+
+        /**
+         * The stored properties of this plugin's configurations, without instantiating them (which would also resolve
+         * their authentication configuration).
+         */
+        fun storedRegistrations(pluginService: PluginService): List<StoredRegistration> =
+            pluginService
+                .getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = PLUGIN_KEY))
+                .map { configuration ->
+                    val properties = configuration.properties
+                    StoredRegistration(
+                        id = configuration.id.id,
+                        manual =
+                            properties?.path(ABONNEMENT_REGISTRATION_PROPERTY)?.textValue() ==
+                                AbonnementRegistration.MANUAL.value,
+                        callbackUrl = properties?.path(CALLBACK_URL_PROPERTY)?.textValue()?.let { normalize(it) },
+                        secret = properties?.path(AUTH_HEADER_PROPERTY)?.textValue(),
+                    )
+                }
     }
+
+    data class StoredRegistration(
+        val id: UUID,
+        val manual: Boolean,
+        val callbackUrl: String?,
+        val secret: String?,
+    )
 }
