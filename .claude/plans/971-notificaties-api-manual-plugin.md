@@ -266,6 +266,13 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   caching v12 callback lookups (v12 has no configuration create/update events to keep a cache in sync).
 - Round 3 (v12, no mustFix), left over: the manual view instantiates the plugin, so it answers 500 when the
   configuration's authentication configuration was deleted (it could read the stored properties instead).
+- UI breaker round 1 (main, no mustFix). Decisions confirmed, not changed: a notificatie accepted with any
+  configuration's secret reaches every `receive-notificatie` link (the callback authorises the sender, as core #971;
+  links don't know which abonnement delivered a notificatie); the shared secret is visible to admins in the plugin
+  configuration API (non-secret property, as #971). Left over: a refused save shows "Internal Server Error" (Valtimo
+  wraps every plugin-event validation error in a 500, core included); a callback URL with another path under
+  `/api/v1/notificatiesapi-manual/` is accepted but gets no notificaties (the docs name the two paths). AC 3 is covered
+  by unit tests only (the UI breaker had no Open Notificaties admin access).
 - Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
   fit the 255-character link column (as core); the manual view shows the "save first" hint for any error, not only 404.
 
