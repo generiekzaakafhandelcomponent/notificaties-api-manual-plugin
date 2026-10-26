@@ -35,12 +35,18 @@ A developer adds the plugin to the application first. See [Installation and tech
 {% stepper %}
 {% step %}
 Go to **Admin** > **Plugins**
+
+<figure><img src="assets/plugins/notificaties-api-manual/01-plugins.png" alt=""><figcaption>Plugins overview</figcaption></figure>
 {% endstep %}
 {% step %}
 Click **Configure plugin**, select **Notificaties API (manual abonnement)** and click **Enter data**
+
+<figure><img src="assets/plugins/notificaties-api-manual/02-choose-plugin.png" alt=""><figcaption>Choosing the plugin</figcaption></figure>
 {% endstep %}
 {% step %}
 Fill in the properties and click **Save configuration**
+
+<figure><img src="assets/plugins/notificaties-api-manual/03-automatic.png" alt=""><figcaption>Configuration with automatic registration</figcaption></figure>
 {% endstep %}
 {% endstepper %}
 
@@ -111,11 +117,17 @@ Click **Save configuration**
 {% endstep %}
 {% endstepper %}
 
+An example configuration with manual registration:
+
+<figure><img src="assets/plugins/notificaties-api-manual/04-manual.png" alt=""><figcaption>Configuration with manual registration</figcaption></figure>
+
 ### Viewing what the abonnement must contain
 
 After a configuration is saved with **Manual**, its form shows what the abonnement in Open Notificaties must contain:
 the callback URL and the channel `objecten`, without filters. That is the channel that **Verzoek** and **Portaaltaak**
 use. For a new configuration the form asks to save it first.
+
+<figure><img src="assets/plugins/notificaties-api-manual/05-abonnement.png" alt=""><figcaption>What the abonnement must contain</figcaption></figure>
 
 ### Creating the abonnement in Open Notificaties
 
