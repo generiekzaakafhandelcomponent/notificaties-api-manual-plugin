@@ -273,6 +273,14 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   wraps every plugin-event validation error in a 500, core included); a callback URL with another path under
   `/api/v1/notificatiesapi-manual/` is accepted but gets no notificaties (the docs name the two paths). AC 3 is covered
   by unit tests only (the UI breaker had no Open Notificaties admin access).
+- UI breaker round 1 (v12): rejected as mustFix, "Automatic → Manual leaves the abonnement in Open Notificaties": the
+  #971 decision (the administrator removes it, or keeps it by using its secret as the shared secret); the docs say so,
+  also for the default case without Authentication header. Left over: callback URL checks compare normalized strings,
+  so host case, a query or fragment bypass them; a Manual callback URL with another path under the plugin's endpoint
+  is accepted but receives nothing; on Valtimo 12 a refused save leaves the configuration dialog disabled without a
+  message (core behaviour, also for the standard plugin).
+- Docs breaker round 1 (v12): concurrent duplicate delivery through both plugins can be answered once with a 500
+  before Open Notificaties' retry is ignored (core's intake; documented).
 - Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
   fit the 255-character link column (as core); the manual view shows the "save first" hint for any error, not only 404.
 

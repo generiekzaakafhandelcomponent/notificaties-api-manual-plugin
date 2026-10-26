@@ -14,7 +14,8 @@ it, so automatic registration fails.
 The plugin has its own plugin key (`notificatiesapi-manual`), callback address and database table. Installing it
 changes nothing for the standard Notificaties API plugin. Notificaties it receives are processed exactly like those of
 the standard plugin: **Verzoek**, **Portaaltaak**, **Receive a notification** process links and other plugins all
-receive them. A notificatie that arrives through both plugins is processed once.
+receive them. A notificatie that arrives through both plugins is processed once (when both deliver it at the same
+moment, one delivery may first be answered with an error; Open Notificaties retries it, and it is then ignored).
 
 Each configuration chooses how its abonnement is registered:
 
@@ -50,6 +51,7 @@ dependencies {
 In `app.module.ts`:
 
 ```typescript
+import {PLUGINS_TOKEN} from '@valtimo/plugin';
 import {
   NotificatiesApiManualPluginModule,
   notificatiesApiManualPluginSpecification,
@@ -132,9 +134,9 @@ plugin configuration. The buttons are **Plugin configureren** (Configure plugin)
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
 | Authentication plugin configuration | A configuration of the **OpenNotificaties** authentication plugin, which Valtimo uses to call Open Notificaties. |
 
-Saving is refused, with a general error message, when:
+With **Manual**, **Save configuration** stays disabled until a shared secret is entered. Saving is refused, with a
+general error message, when:
 
-- **Manual** is chosen without a shared secret;
 - the secret starts with `Bearer` (in any case), starts or ends with a space, contains characters other than printable
   ASCII, or is longer than 255 characters;
 - the callback URL ends in `/api/v1/notificatiesapi/callback` (the address of the standard plugin), or is the callback
@@ -240,9 +242,10 @@ The variables `notificatieKanaal`, `notificatieResourceUrl`, `notificatieActie`,
 
 {% hint style="warning" %}
 **Switching a configuration to Manual.** The abonnement that Valtimo registered earlier stays in Open Notificaties and
-keeps sending notificaties until an administrator removes it. The **Shared secret** field takes over the current
-Authentication header: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
-change it to refuse them.
+keeps sending notificaties until an administrator removes it. If an Authentication header was set, the **Shared
+secret** field takes it over: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
+change it to refuse them. If the header was left empty, the field is empty too, and the old abonnement's notificaties
+are refused (`401`) whatever you enter. Remove that abonnement in Open Notificaties.
 {% endhint %}
 
 {% hint style="warning" %}

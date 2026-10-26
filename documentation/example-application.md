@@ -60,6 +60,9 @@ The source code is split up into two modules:
 
 ## Trying the plugin
 
+Open Notificaties runs in Docker, so a callback URL it must reach uses `host.docker.internal` instead of `localhost`, as
+the deployed configuration does.
+
 The sandbox turns off the automatic registration of the standard Notificaties API plugin
 (`valtimo.zgw.register-abonnementen: false`), because Open Notificaties in Docker can't reach its callback.
 
