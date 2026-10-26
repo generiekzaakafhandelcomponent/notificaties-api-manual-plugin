@@ -13,7 +13,8 @@ it, so automatic registration fails.
 The plugin has its own plugin key (`notificatiesapi-manual`), callback address and database table. Installing it
 changes nothing for the standard Notificaties API plugin. Notificaties it receives are processed exactly like those of
 the standard plugin: **Verzoek**, **Portaaltaak**, **Receive a notification** process links and other plugins all
-receive them. A notificatie that arrives through both plugins is processed once.
+receive them. A notificatie that arrives through both plugins is processed once (when both deliver it at the same
+moment, one delivery may first be answered with an error; Open Notificaties retries it, and it is then ignored).
 
 Each configuration chooses how its abonnement is registered:
 
@@ -49,6 +50,7 @@ dependencies {
 In `app.module.ts`:
 
 ```typescript
+import {PLUGINS_TOKEN} from '@valtimo/plugin';
 import {
   NotificatiesApiManualPluginModule,
   notificatiesApiManualPluginSpecification,
@@ -111,9 +113,9 @@ plugin configuration. The buttons are **Plugin configureren** (Configure plugin)
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
 | Authentication plugin configuration | A configuration of the **OpenNotificaties** authentication plugin, which Valtimo uses to call Open Notificaties. |
 
-Saving is refused, with a general error message, when:
+With **Manual**, **Save configuration** stays disabled until a shared secret is entered. Saving is refused, with a
+general error message, when:
 
-- **Manual** is chosen without a shared secret;
 - the secret starts with `Bearer` (in any case), starts or ends with a space, contains characters other than printable
   ASCII, or is longer than 255 characters;
 - the callback URL ends in `/api/v1/notificatiesapi/callback` (the address of the standard plugin), or is the callback
@@ -166,8 +168,8 @@ In the admin of Open Notificaties:
 
 {% stepper %}
 {% step %}
-Make sure every channel in the list exists; create a missing channel under **Kanalen** in the admin of Open
-Notificaties. (With **Automatic** registration Valtimo creates missing channels itself; with **Manual** it doesn't.)
+Make sure channel `objecten` exists; create it under **Kanalen** in the admin of Open Notificaties if it's missing.
+(With **Automatic** registration Valtimo creates it itself; with **Manual** it doesn't.)
 {% endstep %}
 {% step %}
 Create an abonnement with the **Callback URL** shown in Valtimo
@@ -176,9 +178,7 @@ Create an abonnement with the **Callback URL** shown in Valtimo
 Enter the **Shared secret** of the configuration in the **Auth** field of the abonnement
 {% endstep %}
 {% step %}
-Add an entry for every channel in the list, with exactly the filters shown for it: each line `key = value` becomes a
-filter with that key (for example `actie`) and value (for example `create`). These are the filters Valtimo itself uses
-for **Automatic** registration.
+Add channel `objecten`, without filters
 {% endstep %}
 {% endstepper %}
 
@@ -192,9 +192,10 @@ this plugin. Other notificaties are refused (`401`, or `403` without a secret) a
 
 {% hint style="warning" %}
 **Switching a configuration to Manual.** The abonnement that Valtimo registered earlier stays in Open Notificaties and
-keeps sending notificaties until an administrator removes it. The **Shared secret** field takes over the current
-Authentication header: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
-change it to refuse them.
+keeps sending notificaties until an administrator removes it. If an Authentication header was set, the **Shared
+secret** field takes it over: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
+change it to refuse them. If the header was left empty, the field is empty too, and the old abonnement's notificaties
+are refused (`401`) whatever you enter. Remove that abonnement in Open Notificaties.
 {% endhint %}
 
 {% hint style="warning" %}

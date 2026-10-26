@@ -60,6 +60,9 @@ The source code is split up into two modules:
 
 ## Trying the plugin
 
+Open Notificaties runs in Docker, so a callback URL it must reach uses `host.docker.internal` instead of `localhost`, as
+the deployed configuration does.
+
 1. Log in as `admin` and go to **Admin** > **Plugins**. Open **Notificaties API, handmatig abonnement (Autodeployed)**:
    the form shows **Manual** (**Handmatig**) registration and, below it, the callback URL and the channel the abonnement must contain.
 2. Send a notificatie straight to the callback address, as Open Notificaties would (this skips Open Notificaties; to go
