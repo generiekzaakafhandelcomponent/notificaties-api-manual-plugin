@@ -61,7 +61,9 @@ The source code is split up into two modules:
 ## Trying the plugin
 
 Open Notificaties runs in Docker, so a callback URL it must reach uses `host.docker.internal` instead of `localhost`, as
-the deployed configuration does.
+the deployed configuration does. The standard plugin's configuration in the sandbox also has an abonnement on
+`objecten`: a notificatie sent through Open Notificaties reaches Valtimo twice, and Open Notificaties may log one failed
+delivery that it retries and that is then ignored.
 
 1. Log in as `admin` and go to **Admin** > **Plugins**. Open **Notificaties API, handmatig abonnement (Autodeployed)**:
    the form shows **Manual** (**Handmatig**) registration and, below it, the callback URL and the channel the abonnement must contain.
@@ -76,4 +78,4 @@ the deployed configuration does.
 
    The answer is `204` and the notificatie is passed on to the plugins that process notificaties. With another secret
    the answer is `401`, without one `403`. A notificatie identical to one received before is ignored (still `204`);
-   the command above makes each one unique.
+   the command above makes each one unique per second.

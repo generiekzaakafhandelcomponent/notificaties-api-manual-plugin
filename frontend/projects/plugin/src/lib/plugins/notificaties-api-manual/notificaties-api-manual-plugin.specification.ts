@@ -44,7 +44,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       abonnementRegistrationManual: 'Handmatig',
       sharedSecret: 'Gedeeld geheim',
       sharedSecretTooltip:
-        'Vul hetzelfde geheim in bij het veld Auth van het abonnement in Open Notificaties. GZAC accepteert alleen notificaties met dit geheim. Gebruik een gewone waarde die niet met "Bearer" begint.',
+        'Vul hetzelfde geheim in bij het veld Auth van het abonnement in Open Notificaties. GZAC accepteert alleen notificaties met een geheim van deze plug-in. Gebruik een gewone waarde die niet met "Bearer" begint.',
       manualAbonnementDescription:
         'Het abonnement in Open Notificaties moet deze callback URL en dit kanaal zonder filters bevatten.',
       manualAbonnementKanaal: 'Kanaal',
@@ -74,7 +74,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       abonnementRegistrationManual: 'Manual',
       sharedSecret: 'Shared secret',
       sharedSecretTooltip:
-        'Enter the same secret in the Auth field of the abonnement in Open Notificaties. GZAC only accepts notifications that carry this secret. Use a plain value that does not start with "Bearer".',
+        'Enter the same secret in the Auth field of the abonnement in Open Notificaties. GZAC only accepts notifications that carry a secret of this plugin. Use a plain value that does not start with "Bearer".',
       manualAbonnementDescription:
         'The abonnement in Open Notificaties must contain this callback URL and this channel without filters.',
       manualAbonnementKanaal: 'Channel',
@@ -99,7 +99,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       abonnementRegistrationAutomatic: 'Automatisch',
       abonnementRegistrationManual: 'Manuell',
       sharedSecret: 'Gemeinsames Geheimnis',
-      sharedSecretTooltip: 'Geben Sie dasselbe Geheimnis im Feld Auth des Abonnements in Open Notificaties ein. GZAC akzeptiert nur Benachrichtigungen mit diesem Geheimnis. Verwenden Sie einen einfachen Wert, der nicht mit "Bearer" beginnt.',
+      sharedSecretTooltip: 'Geben Sie dasselbe Geheimnis im Feld Auth des Abonnements in Open Notificaties ein. GZAC akzeptiert nur Benachrichtigungen mit einem Geheimnis dieses Plugins. Verwenden Sie einen einfachen Wert, der nicht mit "Bearer" beginnt.',
       manualAbonnementDescription: 'Das Abonnement in Open Notificaties muss diese Callback URL und diesen Kanal ohne Filter enthalten.',
       manualAbonnementKanaal: 'Kanal',
       manualAbonnementNoKanalen: 'Für diese Konfiguration werden noch keine Kanäle benötigt.',

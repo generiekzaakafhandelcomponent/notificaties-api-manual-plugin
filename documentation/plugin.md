@@ -108,7 +108,7 @@ plugin configuration. The buttons are **Plugin configureren** (Configure plugin)
 | Configuration name | The name under which the configuration can be found in the rest of the application. |
 | Notificaties API URL | The URL of the REST API of Open Notificaties, for example `https://opennotificaties.example.com/api/v1/`. |
 | Callback URL | The address where Open Notificaties sends notificaties. **Automatic**: the GZAC back-end address followed by `/api/v1/notificatiesapi-manual/callback`. **Manual**: the address through which Open Notificaties reaches Valtimo via the gateway, followed by `/api/v1/notificatiesapi-manual/callback/manual`. |
-| Abonnement registration | **Automatic** or **Manual**. |
+| Abonnement registration | **Automatic** (the default) or **Manual**. |
 | Authentication header | Shown with **Automatic**. The secret that Valtimo places on the abonnement it registers. When left empty, the secret of the existing abonnement stays in use, or a random one is generated. A changed value is sent to the abonnement when saving. |
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
 | Authentication plugin configuration | A configuration of the **OpenNotificaties** authentication plugin, which Valtimo uses to call Open Notificaties. |
@@ -194,8 +194,8 @@ this plugin. Other notificaties are refused (`401`, or `403` without a secret) a
 **Switching a configuration to Manual.** The abonnement that Valtimo registered earlier stays in Open Notificaties and
 keeps sending notificaties until an administrator removes it. If an Authentication header was set, the **Shared
 secret** field takes it over: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
-change it to refuse them. If the header was left empty, the field is empty too, and the old abonnement's notificaties
-are refused (`401`) whatever you enter. Remove that abonnement in Open Notificaties.
+change it to refuse them. If the field is empty, Valtimo doesn't show the old abonnement's secret, so its notificaties
+are refused (`401`) unless you happen to know and enter it. Remove that abonnement in Open Notificaties.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -212,7 +212,8 @@ Notificaties URL of a configuration is changed, its old abonnement stays in the 
 {% hint style="info" %}
 Deleting a configuration does not remove a manually created abonnement from Open Notificaties. When Valtimo cannot
 remove an automatically registered abonnement, it logs its address; remove it in Open Notificaties. Switching a
-configuration to **Manual** and back to **Automatic** registers a new abonnement. A configuration whose authentication plugin configuration has been deleted can't
+configuration to **Manual** and back to **Automatic** registers a new abonnement; change its callback URL back to
+`.../callback` as well. A configuration whose authentication plugin configuration has been deleted can't
 be deleted any more (as with the standard plugin on Valtimo 12): delete it before its authentication configuration.
 {% endhint %}
 
