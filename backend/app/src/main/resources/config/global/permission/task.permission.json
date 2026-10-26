@@ -1,26 +1,29 @@
-[
-    {
-        "resourceType": "com.ritense.valtimo.operaton.domain.OperatonTask",
-        "actions": [
-            "assign",
-            "assignable",
-            "claim",
-            "complete",
-            "view_list",
-            "view"
-        ],
-        "roleKey": "ROLE_ADMIN"
-    },
-    {
-        "resourceType": "com.ritense.valtimo.operaton.domain.OperatonTask",
-        "actions": [
-            "assign",
-            "assignable",
-            "claim",
-            "complete",
-            "view_list",
-            "view"
-        ],
-        "roleKey": "ROLE_USER"
-    }
-]
+{
+    "changesetId": "task",
+    "permissions": [
+        {
+            "resourceType": "com.ritense.valtimo.camunda.domain.CamundaTask",
+            "actions": [
+                "assign",
+                "assignable",
+                "claim",
+                "complete",
+                "view_list",
+                "view"
+            ],
+            "roleKey": "ROLE_ADMIN"
+        },
+        {
+            "resourceType": "com.ritense.valtimo.camunda.domain.CamundaTask",
+            "actions": [
+                "assign",
+                "assignable",
+                "claim",
+                "complete",
+                "view_list",
+                "view"
+            ],
+            "roleKey": "ROLE_USER"
+        }
+    ]
+}

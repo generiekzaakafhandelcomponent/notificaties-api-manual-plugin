@@ -1,16 +1,19 @@
-[
-    {
-        "resourceType": "com.ritense.valtimo.operaton.domain.OperatonExecution",
-        "actions": [
-            "create"
-        ],
-        "roleKey": "ROLE_ADMIN"
-    },
-    {
-        "resourceType": "com.ritense.valtimo.operaton.domain.OperatonExecution",
-        "actions": [
-            "create"
-        ],
-        "roleKey": "ROLE_USER"
-    }
-]
+{
+    "changesetId": "processinstance",
+    "permissions": [
+        {
+            "resourceType": "com.ritense.valtimo.camunda.domain.CamundaExecution",
+            "actions": [
+                "create"
+            ],
+            "roleKey": "ROLE_ADMIN"
+        },
+        {
+            "resourceType": "com.ritense.valtimo.camunda.domain.CamundaExecution",
+            "actions": [
+                "create"
+            ],
+            "roleKey": "ROLE_USER"
+        }
+    ]
+}

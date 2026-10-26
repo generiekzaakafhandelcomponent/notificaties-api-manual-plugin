@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gzac-plugin-template
+    name: notificaties-api-manual-plugin
   profiles:
     active: dev
   jackson:
@@ -82,6 +82,8 @@ valtimo:
         - localhost
   plugin:
     encryption-secret: "abcdefghijklmnop"
+  connector-encryption:
+    secret: "abcdefghijklmnop"
   docker:
     filter:
       enabled: true
@@ -125,7 +127,7 @@ audit:
   record:
     retention: 365 # days
 
-operaton:
+camunda:
   bpm:
     history-level: AUDIT
     history-level-default: AUDIT

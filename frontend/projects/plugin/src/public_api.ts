@@ -15,11 +15,13 @@
  */
 
 /*
- * Public API Surface of sample-plugin
+ * Public API Surface of notificaties-api-manual
  */
 
-export * from "./lib/plugins/sample-plugin/models";
-export * from "./lib/plugins/sample-plugin/sample-plugin-module";
-export * from "./lib/plugins/sample-plugin/sample-plugin.specification";
-export * from "./lib/plugins/sample-plugin/components/sample-plugin-configuration/sample-plugin-configuration.component";
-export * from "./lib/plugins/sample-plugin/components/sample-action-configuration/sample-action-configuration.component";
+export * from './lib/plugins/notificaties-api-manual/models';
+export * from './lib/plugins/notificaties-api-manual/services';
+export * from './lib/plugins/notificaties-api-manual/test-ids';
+export * from './lib/plugins/notificaties-api-manual/notificaties-api-manual-plugin.module';
+export * from './lib/plugins/notificaties-api-manual/notificaties-api-manual-plugin.specification';
+export * from './lib/plugins/notificaties-api-manual/components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
+export * from './lib/plugins/notificaties-api-manual/components/manual-abonnement/notificaties-api-manual-plugin-manual-abonnement.component';

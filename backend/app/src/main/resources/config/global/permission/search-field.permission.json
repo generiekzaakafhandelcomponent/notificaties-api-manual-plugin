@@ -1,16 +1,19 @@
-[
-    {
-        "resourceType": "com.ritense.document.domain.impl.searchfield.SearchField",
-        "actions": [
-            "view_list"
-        ],
-        "roleKey": "ROLE_ADMIN"
-    },
-    {
-        "resourceType": "com.ritense.document.domain.impl.searchfield.SearchField",
-        "actions": [
-            "view_list"
-        ],
-        "roleKey": "ROLE_USER"
-    }
-]
+{
+    "changesetId": "search-field",
+    "permissions": [
+        {
+            "resourceType": "com.ritense.document.domain.impl.searchfield.SearchField",
+            "actions": [
+                "view_list"
+            ],
+            "roleKey": "ROLE_ADMIN"
+        },
+        {
+            "resourceType": "com.ritense.document.domain.impl.searchfield.SearchField",
+            "actions": [
+                "view_list"
+            ],
+            "roleKey": "ROLE_USER"
+        }
+    ]
+}

@@ -38,7 +38,6 @@ allprojects {
         mavenCentral()
         maven { url = uri("https://s01.oss.sonatype.org/content/repositories/releases/") }
         maven { url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/") }
-        maven { url = uri("https://valtimo-releases.s3.eu-central-1.amazonaws.com/") }
     }
 }
 
@@ -63,12 +62,12 @@ subprojects {
         apply(plugin = "maven-publish")
         apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
-        java.sourceCompatibility = JavaVersion.VERSION_21
-        java.targetCompatibility = JavaVersion.VERSION_21
+        java.sourceCompatibility = JavaVersion.VERSION_17
+        java.targetCompatibility = JavaVersion.VERSION_17
 
         tasks.withType<KotlinCompile> {
             compilerOptions {
-                jvmTarget = JvmTarget.JVM_21
+                jvmTarget = JvmTarget.JVM_17
                 javaParameters = true
             }
         }
@@ -91,7 +90,7 @@ subprojects {
         if (Os.isFamily(FAMILY_MAC)) {
             println("Configure docker compose for macOs")
             dockerCompose {
-                projectNamePrefix = "sample-plugin-"
+                projectNamePrefix = "notificaties-api-manual-"
                 setProjectName("${rootProject.name}-${project.name}")
                 executable = "/usr/local/bin/docker-compose"
                 dockerExecutable = "/usr/local/bin/docker"
