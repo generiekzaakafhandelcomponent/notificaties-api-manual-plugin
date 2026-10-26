@@ -1,14 +1,14 @@
 # Example Application
 
-This project also contains a working example application which is meant to showcase the plugin.
+This project contains a sandbox application with the plugin installed. It deploys a configuration of this plugin with manual registration (`backend/app/src/main/resources/config/plugin/notificaties-api-manual.pluginconfig.json`, shared secret `local-shared-secret`).
 
 ## Running the example application
 
-All commands below should be run from the **project root** directory.
+Run the Gradle commands from the **project root** directory and the npm commands from `frontend/`.
 
 ### Prerequisites
 
-- Java 21
+- Java 17 or later
 - [Docker (Desktop)](https://www.docker.com/products/docker-desktop/)
 
 ### Start docker
@@ -32,6 +32,7 @@ By gradle script:
 ### Start frontend
 
 ```shell
+cd frontend
 nvm use 20
 npm run clean
 npm install
@@ -55,3 +56,19 @@ The source code is split up into two modules:
 
 1. [Frontend](/frontend)
 2. [Backend](/backend)
+
+## Trying the plugin
+
+1. Log in as `admin` and go to **Admin** > **Plugins**. Open **Notificaties API, handmatig abonnement (Autodeployed)**:
+   the form shows **Manual** registration and, below it, the callback URL and the channel the abonnement must contain.
+2. Send a notificatie to the callback address, as Open Notificaties would:
+
+   ```shell
+   curl -i -X POST localhost:8080/api/v1/notificatiesapi-manual/callback/manual \
+     -H 'Authorization: local-shared-secret' -H 'Content-Type: application/json' \
+     -d '{"kanaal":"objecten","hoofdObject":"http://x/1","resourceUrl":"http://x/'"$(date +%s)"'","actie":"create","aanmaakdatum":"'"$(date -u +%FT%T)"'","kenmerken":{}}'
+   ```
+
+   The answer is `204` and the notificatie is passed on to the plugins that process notificaties. With another secret
+   the answer is `401`, without one `403`. A notificatie identical to one received before is ignored (still `204`);
+   the command above makes each one unique.

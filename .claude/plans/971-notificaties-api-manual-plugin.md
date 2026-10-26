@@ -125,7 +125,8 @@ Backend:
    a time; events that arrive while a sweep is pending share it (a case import with N links gives one sweep, not N).
    Failures are logged, so an unreachable Open Notificaties never turns an unrelated save into a 500.
    The cleanup after a deleted configuration runs on that thread too, so a running sweep can't save a link for it
-   afterwards. A configuration id change during a running sweep can still leave an orphan link (left over).
+   afterwards. Every sweep also removes links of configurations that no longer exist (a cleanup lost on shutdown,
+   an id change during a running sweep), after which the stale cleanup removes their abonnement.
    Changed `authHeader`: Open Notificaties never returns `auth` (write-only), so the "unchanged" check compares the
    desired key with the `auth` stored in this plugin's link row, not with the API response. Different → update.
    Comparing with the API response would send a PUT on every sweep, and every PUT makes Open Notificaties call the
@@ -265,6 +266,13 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   caching v12 callback lookups (v12 has no configuration create/update events to keep a cache in sync).
 - Round 3 (v12, no mustFix), left over: the manual view instantiates the plugin, so it answers 500 when the
   configuration's authentication configuration was deleted (it could read the stored properties instead).
+- UI breaker round 1 (main, no mustFix). Decisions confirmed, not changed: a notificatie accepted with any
+  configuration's secret reaches every `receive-notificatie` link (the callback authorises the sender, as core #971;
+  links don't know which abonnement delivered a notificatie); the shared secret is visible to admins in the plugin
+  configuration API (non-secret property, as #971). Left over: a refused save shows "Internal Server Error" (Valtimo
+  wraps every plugin-event validation error in a 500, core included); a callback URL with another path under
+  `/api/v1/notificatiesapi-manual/` is accepted but gets no notificaties (the docs name the two paths). AC 3 is covered
+  by unit tests only (the UI breaker had no Open Notificaties admin access).
 - Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
   fit the 255-character link column (as core); the manual view shows the "save first" hint for any error, not only 404.
 
@@ -280,7 +288,7 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   versions and recommended later. Global switch; documented.
 - Process links copied on a BPMN-only redeploy publish no event, and on 13.41–13.50 deleting all links of a process
   definition publishes no delete event; those filters reach an Automatic abonnement on the next trigger or restart (as
-  core). A case import publishes one event per link, so it triggers one sweep per link (as core). Documented.
+  core). A case import publishes one event per link; those share one sweep. Documented.
 - Validation also runs on autodeploy: a `.pluginconfig.json` that breaks a rule (callback shared with core, Manual and
   Automatic sharing a callback, a `Bearer…` secret) stops startup on Valtimo 13, as any invalid plugin configuration
   does; on Valtimo 12 the configuration (and the rest of that file) is skipped and logged. Documented.

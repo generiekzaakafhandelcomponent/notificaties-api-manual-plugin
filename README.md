@@ -1,21 +1,32 @@
-# GZAC Plugin Template
+# Notificaties API plugin with manual abonnement registration
 
-A template repository for building your own GZAC plugins. Copy this project to get a ready-made structure with build
-configuration, CI/CD workflows, and a working example to start from.
+A GZAC plugin that receives notificaties from Open Notificaties through an abonnement that an administrator creates,
+for environments where all traffic between systems goes through a gateway that checks certificates. It is a copy of
+the standard Notificaties API plugin under its own key (`notificatiesapi-manual`), with manual abonnement registration
+([gzac-issues#971](https://github.com/generiekzaakafhandelcomponent/gzac-issues/issues/971)) added. Installing it
+changes nothing for the standard plugin.
 
-## Getting started
+| Branch | Valtimo | Version |
+|--------|---------|---------|
+| `main` | 13.41.0 and later 13.x | `1.0.0` |
+| `v12`  | 12.45.0 and later 12.x | `1.0.0-V12` |
 
-1. Copy or fork this repository
-2. Rename the sample plugin package, module, and configuration to match your plugin
-3. Follow the [Getting Started](documentation/getting-started.md) guide for setup and development instructions
+From Valtimo 13.52.0 the standard Notificaties API plugin has manual abonnement registration itself; move to it when
+you upgrade.
 
 ## Documentation
 
-- [Getting Started](documentation/getting-started.md) — setup and development instructions
-- [Example Application](documentation/example-application.md) — running the example app locally
-- [Sample Plugin](documentation/plugin.md) — reference implementation included in this template
-- [Release notes](documentation/release-notes.md) — versiegeschiedenis en wijzigingen
+- [Plugin](documentation/plugin.md) — installation, configuration, Open Notificaties steps, limitations
+- [Example application](documentation/example-application.md) — running the sandbox application locally
+- [Release notes](documentation/release-notes.md)
+
+## Development
+
+- Backend: `./gradlew :backend:plugin:test` (needs Docker). The jar is compiled against the minimum supported Valtimo
+  version (`valtimoVersion` in `gradle.properties`); CI also tests against the latest.
+- Frontend: in `frontend/`, `npm install`, `npx ng build @valtimo-plugins/notificaties-api-manual`,
+  `npx ng test @valtimo-plugins/notificaties-api-manual --watch=false --browsers=ChromeHeadless`.
 
 ## Contact
 
--- naam contactpersoon (bedrijfsnaam)
+Team Valtimo (Ritense)
