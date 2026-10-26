@@ -25,6 +25,7 @@ import com.ritense.plugin.events.PluginConfigurationUpdatedEvent
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
+import com.ritense.processlink.event.ProcessLinkCreatedEvent
 import com.ritense.processlink.event.ProcessLinkDeletedEvent
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.CALLBACK_URL
@@ -444,6 +445,63 @@ class NotificatiesApiManualPluginAbonnementRegistrarTest {
         assertEquals(2, links.size)
         assertEquals(first.configurationId.id, links.first().configurationId.id)
     }
+
+    @Test
+    fun `events share one queued sweep until it starts`() {
+        val queue = ArrayDeque<Runnable>()
+        val queued = registrarWith { queue.add(it) }
+        queued.handleApplicationFullyReadyEvent()
+        queue.clear()
+
+        queued.handleProcessLinkCreatedEvent(ProcessLinkCreatedEvent("plugin", "process:1"))
+        queued.handleProcessLinkCreatedEvent(ProcessLinkCreatedEvent("plugin", "process:1"))
+        assertEquals(1, queue.size)
+
+        queue.removeFirst().run()
+        queued.handleProcessLinkCreatedEvent(ProcessLinkCreatedEvent("plugin", "process:1"))
+        assertEquals(1, queue.size)
+    }
+
+    @Test
+    fun `the cleanup after a deleted configuration waits for a running sweep`() {
+        val plugin = TestFixtures.plugin().also { plugins += it }
+        val link = link(plugin, "${ON_URL}abonnement/abc")
+        whenever(linkRepository.findById(link.configurationId)).thenReturn(Optional.of(link))
+        val queue = ArrayDeque<Runnable>()
+        val queued = registrarWith { queue.add(it) }
+        queued.handleApplicationFullyReadyEvent()
+        queue.clear()
+
+        queued.handlePluginConfigurationDeletedEvent(
+            PluginConfigurationDeletedEvent(TestFixtures.configurationOf(plugin)),
+        )
+
+        verify(linkRepository, never()).delete(any())
+        while (queue.isNotEmpty()) queue.removeFirst().run()
+        verify(linkRepository).delete(link)
+    }
+
+    @Test
+    fun `a disabled registration instantiates nothing`() {
+        plugins += TestFixtures.plugin()
+        properties.registerAbonnementen = false
+        whenever(pluginService.createInstance(any<PluginConfiguration>())).thenThrow(IllegalStateException("broken"))
+
+        registrar.registerAbonnementen()
+
+        verifyNoInteractions(client)
+    }
+
+    private fun registrarWith(executor: java.util.concurrent.Executor) =
+        NotificatiesApiManualPluginAbonnementRegistrar(
+            client,
+            linkRepository,
+            pluginService,
+            processLinkRepository,
+            mock<PlatformTransactionManager>(),
+            properties,
+            executor,
+        )
 
     private fun link(
         plugin: NotificatiesApiManualPlugin,

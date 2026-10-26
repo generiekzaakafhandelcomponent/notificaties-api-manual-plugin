@@ -87,7 +87,8 @@ class NotificatiesApiManualPluginAutoConfiguration {
         )
 
     /**
-     * Single-threaded executor for the startup registration, so its retry loop doesn't block the event thread.
+     * Single-threaded executor all registration work runs on (the startup retry loop, event-triggered sweeps, cleanup
+     * after a deleted configuration): never on the event thread or a request, and never two at a time.
      * Daemon threads that are not awaited on shutdown, so a pending retry never delays JVM exit.
      */
     @Bean("notificatiesApiManualPluginRegistrationExecutor")

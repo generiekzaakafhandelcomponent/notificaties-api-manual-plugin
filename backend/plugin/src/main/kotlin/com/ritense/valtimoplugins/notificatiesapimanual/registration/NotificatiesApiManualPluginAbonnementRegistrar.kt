@@ -40,6 +40,7 @@ import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiMa
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.coreCallbackUrls
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.normalize
+import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.storedRegistrations
 import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginAbonnementLinkRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.event.EventListener
@@ -161,11 +162,14 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
     fun handlePluginConfigurationDeletedEvent(event: PluginConfigurationDeletedEvent) {
         if (!applicationFullyReady || !isRelevant(event.pluginConfiguration)) return
         if (event.pluginConfiguration.pluginDefinition.key == PLUGIN_KEY) {
-            try {
-                removeAbonnementForDeletedConfiguration(event.pluginConfiguration)
-            } catch (e: Exception) {
-                // The configuration is already deleted; throwing out of afterCommit would only report a 500.
-                logger.error(e) { "Could not clean up after the removed plugin configuration" }
+            // On the registration thread, so a sweep still running for this configuration can't save its link after
+            // the cleanup.
+            registrationExecutor.execute {
+                try {
+                    removeAbonnementForDeletedConfiguration(event.pluginConfiguration)
+                } catch (e: Exception) {
+                    logger.error(e) { "Could not clean up after the removed plugin configuration" }
+                }
             }
         }
         requestSweep()
@@ -208,10 +212,8 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
     }
 
     fun registerAbonnementen(attemptsPerUrl: Int = DEFAULT_ATTEMPTS) {
-        val kanaalFilters =
-            NotificatiesApiManualPluginKanaalFilters.fromPluginService(pluginService, pluginProcessLinkRepository)
         val coreCallbackUrls = coreCallbackUrls(pluginService)
-        warnAboutCallbackUrlsSharedWithCore(kanaalFilters.configurations, coreCallbackUrls)
+        warnAboutCallbackUrlsSharedWithCore(coreCallbackUrls)
 
         if (!properties.registerAbonnementen) {
             logger.info {
@@ -221,6 +223,8 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
             return
         }
 
+        val kanaalFilters =
+            NotificatiesApiManualPluginKanaalFilters.fromPluginService(pluginService, pluginProcessLinkRepository)
         val groups = kanaalFilters.automaticConfigurations().groupBy { normalize(it.url) }
         if (groups.isEmpty()) return
 
@@ -247,16 +251,13 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
      * this plugin's validation refuses it the other way round) would lose its abonnement, a manual one included.
      * Runs on every sweep, also when there is nothing to register.
      */
-    private fun warnAboutCallbackUrlsSharedWithCore(
-        configurations: List<NotificatiesApiManualPlugin>,
-        coreCallbackUrls: Set<String>,
-    ) {
-        configurations
-            .filter { normalize(it.callbackUrl) in coreCallbackUrls }
+    private fun warnAboutCallbackUrlsSharedWithCore(coreCallbackUrls: Set<String>) {
+        storedRegistrations(pluginService)
+            .filter { it.callbackUrl in coreCallbackUrls }
             .forEach {
                 logger.error {
-                    "Plugin configuration '${it.configurationId.id}' uses callback URL '${it.callbackUrl}', which a " +
-                        "core Notificaties API configuration uses too. Core will delete its abonnement in Open " +
+                    "Plugin configuration '${it.id}' uses callback URL '${it.callbackUrl}', which a core " +
+                        "Notificaties API configuration uses too. Core will delete its abonnement in Open " +
                         "Notificaties. Give the core configuration its own callback URL (/api/v1/notificatiesapi/callback)."
                 }
             }

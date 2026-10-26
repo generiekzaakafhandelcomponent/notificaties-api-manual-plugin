@@ -124,6 +124,8 @@ Backend:
    Event-triggered sweeps run on the plugin's single registration thread, never on the request thread and never two at
    a time; events that arrive while a sweep is pending share it (a case import with N links gives one sweep, not N).
    Failures are logged, so an unreachable Open Notificaties never turns an unrelated save into a 500.
+   The cleanup after a deleted configuration runs on that thread too, so a running sweep can't save a link for it
+   afterwards. A configuration id change during a running sweep can still leave an orphan link (left over).
    Changed `authHeader`: Open Notificaties never returns `auth` (write-only), so the "unchanged" check compares the
    desired key with the `auth` stored in this plugin's link row, not with the API response. Different → update.
    Comparing with the API response would send a PUT on every sweep, and every PUT makes Open Notificaties call the
@@ -261,9 +263,10 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   coalesced on the registration thread. Skipped: one abonnement per automatic configuration (design change), dropping
   the v12 callback separation (decision above), dropping the #971 "no cleanup next to a manual configuration" rule,
   caching v12 callback lookups (v12 has no configuration create/update events to keep a cache in sync).
+- Round 3 (v12, no mustFix), left over: the manual view instantiates the plugin, so it answers 500 when the
+  configuration's authentication configuration was deleted (it could read the stored properties instead).
 - Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
-  fit the 255-character link column (as core); the startup sweep and an event sweep can run at the same time and both
-  create an abonnement (as core); the manual view shows the "save first" hint for any error, not only 404.
+  fit the 255-character link column (as core); the manual view shows the "save first" hint for any error, not only 404.
 
 ## Risks
 
