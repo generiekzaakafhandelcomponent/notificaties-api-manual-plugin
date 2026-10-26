@@ -281,6 +281,8 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   message (core behaviour, also for the standard plugin).
 - Docs breaker round 1 (v12): concurrent duplicate delivery through both plugins can be answered once with a 500
   before Open Notificaties' retry is ignored (core's intake; documented).
+- Docs breaker round 2 (v12): the 500 for a concurrent duplicate delivery comes from core's intake; with stack traces
+  enabled (as in the sandbox for localhost) its body shows the SQL statement.
 - Round 2 (main, no mustFix), left over: an Open Notificaties `url` over ~208 characters gives abonnement URLs that don't
   fit the 255-character link column (as core); the manual view shows the "save first" hint for any error, not only 404.
 
