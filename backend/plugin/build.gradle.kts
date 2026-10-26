@@ -15,7 +15,7 @@
  */
 
 dockerCompose {
-    setProjectName("sample-plugin")
+    setProjectName("notificaties-api-manual")
     isRequiredBy(project.tasks.test)
 
     tasks.test {
@@ -27,31 +27,53 @@ val kotlinLoggingVersion: String by project
 val mockitoKotlinVersion: String by project
 val valtimoVersion: String by project
 val operatonVersion: String by project
+val okhttpVersion: String by project
 
 dependencies {
+    compileOnly("com.ritense.valtimo:notificaties-api")
     compileOnly("com.ritense.valtimo:plugin-valtimo")
+    compileOnly("com.ritense.valtimo:plugin")
+    compileOnly("com.ritense.valtimo:process-link")
     compileOnly("com.ritense.valtimo:process-document")
+    compileOnly("com.ritense.valtimo:case")
+    compileOnly("com.ritense.valtimo:core")
     compileOnly("com.ritense.valtimo:contract")
+    compileOnly("com.ritense.valtimo:logging")
+    compileOnly("com.ritense.valtimo:authorization")
     compileOnly("org.operaton.bpm:operaton-engine:$operatonVersion")
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
     compileOnly("org.springframework.boot:spring-boot-starter-web")
+    compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
+    compileOnly("org.springframework.boot:spring-boot-starter-security")
+    compileOnly("org.springframework.boot:spring-boot-starter-validation")
 
     compileOnly("io.github.oshai:kotlin-logging:$kotlinLoggingVersion")
 
     // Testing
+    testImplementation("com.ritense.valtimo:notificaties-api")
+    testImplementation("com.ritense.valtimo:notificaties-api-authentication")
     testImplementation("com.ritense.valtimo:plugin-valtimo")
+    testImplementation("com.ritense.valtimo:process-link")
     testImplementation("com.ritense.valtimo:process-document")
+    testImplementation("com.ritense.valtimo:case")
+    testImplementation("com.ritense.valtimo:core")
+    testImplementation("com.ritense.valtimo:logging")
     testImplementation("com.ritense.valtimo:building-block")
     testImplementation("com.ritense.valtimo:local-resource")
     testImplementation("com.ritense.valtimo:test-utils-common")
+    testImplementation("org.operaton.bpm:operaton-engine:$operatonVersion")
+    testImplementation("io.github.oshai:kotlin-logging:$kotlinLoggingVersion")
 
     testImplementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
     testImplementation("org.springframework.boot:spring-boot-starter-security")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
 
     testImplementation("org.mockito:mockito-core")
     testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
+    testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
+    testImplementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
 
     testImplementation("org.postgresql:postgresql")
 

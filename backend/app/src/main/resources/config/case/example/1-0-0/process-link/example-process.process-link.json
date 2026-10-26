@@ -6,14 +6,15 @@
         "formDefinitionName": "start-form-example"
     },
     {
-        "activityId": "time-api-sample-action",
-        "activityType": "bpmn:ServiceTask:start",
+        "activityId": "wait-for-notificatie",
+        "activityType": "bpmn:ReceiveTask:end",
         "processLinkType": "plugin",
-        "pluginDefinitionKey": "sample-plugin",
-        "pluginActionDefinitionKey": "time-api-sample-action",
-        "pluginConfigurationId": "4ac9a49f-4aeb-4f91-86d9-853fd95a1b33",
+        "pluginDefinitionKey": "notificatiesapi-manual",
+        "pluginActionDefinitionKey": "receive-notificatie",
+        "pluginConfigurationId": "6f1d6c0e-5a3b-4f0e-9a51-0b6f3d2c7a10",
         "actionProperties": {
-            "message": "Hello from the sample plugin!"
+            "kanaal": "objecten",
+            "actie": "create"
         }
     }
 ]

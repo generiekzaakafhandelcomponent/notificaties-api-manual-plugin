@@ -1,17 +1,17 @@
 {
-    "name": "@valtimo-plugins/sample-plugin",
+    "name": "@valtimo-plugins/notificaties-api-manual",
     "license": "EUPL-1.2",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "scripts": {
-        "build": "ng build @valtimo-plugins/sample-plugin",
-        "watch": "ng build @valtimo-plugins/sample-plugin --watch"
+        "build": "ng build @valtimo-plugins/notificaties-api-manual",
+        "watch": "ng build @valtimo-plugins/notificaties-api-manual --watch"
     },
     "peerDependencies": {
-        "@angular/common": "19.2.20",
-        "@angular/core": "19.2.20"
+        "@angular/common": "^19.2.0",
+        "@angular/core": "^19.2.0",
+        "@angular/forms": "^19.2.0"
     },
     "dependencies": {
-        "@angular/forms": "19.2.20",
         "tslib": "2.8.1"
     }
 }

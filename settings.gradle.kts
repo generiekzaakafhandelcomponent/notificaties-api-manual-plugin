@@ -1,4 +1,4 @@
-rootProject.name = "gzac-plugin-template"
+rootProject.name = "notificaties-api-manual-plugin"
 include(
     "backend",
     "backend:app",

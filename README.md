@@ -18,4 +18,4 @@ configuration, CI/CD workflows, and a working example to start from.
 
 ## Contact
 
--- naam contactpersoon (bedrijfsnaam)
+Klaas Schuijtemaker (Ritense)

@@ -4,8 +4,8 @@
         "widgets": [
             {
                 "type": "fields",
-                "key": "process-variable-result",
-                "title": "Sample Plugin Result",
+                "key": "received-notificatie",
+                "title": "Received notificatie",
                 "width": 2,
                 "highContrast": true,
                 "properties": {
@@ -21,18 +21,9 @@
                                 }
                             },
                             {
-                                "key": "message",
-                                "title": "Message",
-                                "value": "doc:/message",
-                                "displayProperties": {
-                                    "type": "text",
-                                    "hideWhenEmpty": false
-                                }
-                            },
-                            {
-                                "key": "apiResult",
-                                "title": "API Result",
-                                "value": "doc:/apiResult",
+                                "key": "notificatieResourceUrl",
+                                "title": "Notificatie resource URL",
+                                "value": "doc:/notificatieResourceUrl",
                                 "displayProperties": {
                                     "type": "text",
                                     "hideWhenEmpty": false
