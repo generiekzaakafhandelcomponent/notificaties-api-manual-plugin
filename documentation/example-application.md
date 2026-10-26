@@ -10,6 +10,7 @@ Run the Gradle commands from the **project root** directory and the npm commands
 
 - Java 21
 - [Docker (Desktop)](https://www.docker.com/products/docker-desktop/)
+- Node.js 20 (nvm recommended)
 
 ### Start docker
 
@@ -63,10 +64,12 @@ The sandbox turns off the automatic registration of the standard Notificaties AP
 (`valtimo.zgw.register-abonnementen: false`), because Open Notificaties in Docker can't reach its callback.
 
 1. Log in as `admin` and go to **Admin** > **Plugins**. Open **Notificaties API, handmatig abonnement (Autodeployed)**:
-   the form shows **Manual** registration and, below it, the callback URL and channels the abonnement must contain.
-2. Start an **Example** case. Its process waits in a receive task for a notificatie on channel `objecten` with action
+   the form shows **Manual** (**Handmatig**) registration and, below it, the callback URL and channels the abonnement must contain.
+2. Start an **Example** case: **Cases** (**Dossiers**) > **Example** > **Create new case** (**Creëer Nieuw Dossier**),
+   fill in a name and click **Start**. Its process waits in a receive task for a notificatie on channel `objecten` with action
    `create`.
-3. Send a notificatie to the callback address, as Open Notificaties would:
+3. Send a notificatie straight to the callback address, as Open Notificaties would (this skips Open Notificaties; to go
+   through it, first create kanaal `objecten` and an abonnement as described in [Plugin](plugin.md)):
 
    ```shell
    curl -i -X POST localhost:8080/api/v1/notificatiesapi-manual/callback/manual \

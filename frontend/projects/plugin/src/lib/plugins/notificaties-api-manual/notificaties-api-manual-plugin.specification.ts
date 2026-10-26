@@ -38,7 +38,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       callbackUrl: 'Callback URL',
       callbackUrlTooltip:
         'Het GZAC API-endpoint waar notificaties naartoe moeten worden gestuurd: .../api/v1/notificatiesapi-manual/callback bij automatische registratie, .../api/v1/notificatiesapi-manual/callback/manual bij handmatige registratie.',
-      description: 'Een API om een notificatierouteringscomponent te benaderen.',
+      description: 'Notificaties API met een abonnement dat GZAC zelf registreert of dat een beheerder aanmaakt.',
       configurationTitle: 'Configuratienaam',
       configurationTitleTooltip:
         'De naam van de huidige plugin-configuratie. Onder deze naam kan de configuratie in de rest van de applicatie teruggevonden worden.',
@@ -95,7 +95,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       callbackUrl: 'Callback URL',
       callbackUrlTooltip:
         'The GZAC API-endpoint where notifications should be sent: .../api/v1/notificatiesapi-manual/callback for automatic registration, .../api/v1/notificatiesapi-manual/callback/manual for manual registration.',
-      description: 'An API to access a notification routing component.',
+      description: 'Notificaties API with an abonnement that GZAC registers itself or that an administrator creates.',
       configurationTitle: 'Configuration name',
       configurationTitleTooltip:
         'The name of the current plugin configuration. Under this name, the configuration can be found in the rest of the application.',
@@ -151,7 +151,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       urlTooltip: 'Die URL zur REST API von Notificaties',
       callbackUrl: 'Callback URL',
       callbackUrlTooltip: 'Der GZAC API-Endpunkt, an den Benachrichtigungen gesendet werden: .../api/v1/notificatiesapi-manual/callback bei automatischer Registrierung, .../api/v1/notificatiesapi-manual/callback/manual bei manueller Registrierung.',
-      description: 'Eine API für den Zugriff auf eine Komponente zur Weiterleitung von Benachrichtigungen.',
+      description: 'Notificaties API mit einem Abonnement, das GZAC selbst registriert oder das ein Administrator anlegt.',
       configurationTitle: 'Konfigurationsname',
       configurationTitleTooltip: 'Der Name der aktuellen Plugin-Konfiguration. Unter diesem Namen ist die Konfiguration im Rest der Anwendung zu finden.',
       authenticationPluginConfiguration: 'Konfiguration des Authentifizierungs-Plugins',

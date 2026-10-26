@@ -117,17 +117,20 @@ Fill in the properties and click **Save configuration**
 
 The labels below are the English ones. In Dutch the plugin is called **Notificaties API (handmatig abonnement)**;
 **Registratie abonnement** is Abonnement registration (**Automatisch** / **Handmatig**), **Gedeeld geheim** is Shared
-secret and **Authenticatie header** is Authentication header.
+secret, **Authenticatie header** is Authentication header and **Configuratie authenticatie-plug-in** is Authentication
+plugin configuration. The buttons are **Plugin configureren** (Configure plugin), **Gegevens invullen** (Enter data) and
+**Configuratie opslaan** (Save configuration).
 
 | Property | Description |
 |----------|-------------|
+| Configuration ID | Optional; leave it empty to have one generated. |
 | Configuration name | The name under which the configuration can be found in the rest of the application. |
 | Notificaties API URL | The URL of the REST API of Open Notificaties, for example `https://opennotificaties.example.com/api/v1/`. |
 | Callback URL | The address where Open Notificaties sends notificaties. **Automatic**: the GZAC back-end address followed by `/api/v1/notificatiesapi-manual/callback`. **Manual**: the address through which Open Notificaties reaches Valtimo via the gateway, followed by `/api/v1/notificatiesapi-manual/callback/manual`. |
 | Abonnement registration | **Automatic** or **Manual**. |
 | Authentication header | Shown with **Automatic**. The secret that Valtimo places on the abonnement it registers. When left empty, the secret of the existing abonnement stays in use, or a random one is generated. A changed value is sent to the abonnement when saving. |
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
-| Authentication plugin configuration | The authentication plugin configuration (category Notificaties API authentication) that Valtimo uses to call Open Notificaties. |
+| Authentication plugin configuration | A configuration of the **OpenNotificaties** authentication plugin, which Valtimo uses to call Open Notificaties. |
 
 Saving is refused, with a general error message, when:
 
@@ -186,7 +189,8 @@ The list contains:
 Those plugins can only point to the standard Notificaties API plugin. Behind the gateway their notificaties arrive
 through the abonnement of this plugin, which is why they are listed here.
 
-The list changes when such a process link or plugin configuration is added, changed or removed; update the abonnement
+If nothing needs a channel yet, the form says so; the abonnement then only needs the callback URL and the shared
+secret. The list changes when such a process link or plugin configuration is added, changed or removed; update the abonnement
 in Open Notificaties to match. **Receive a notification** process links in building blocks don't work, neither with this
 plugin nor with the standard plugin.
 
@@ -236,8 +240,9 @@ The variables `notificatieKanaal`, `notificatieResourceUrl`, `notificatieActie`,
 
 {% hint style="warning" %}
 **Switching a configuration to Manual.** The abonnement that Valtimo registered earlier stays in Open Notificaties and
-keeps sending notificaties until an administrator removes it. With its old secret they are refused; if that secret is
-kept as the shared secret, they are accepted and processed once.
+keeps sending notificaties until an administrator removes it. The **Shared secret** field takes over the current
+Authentication header: keep it to go on accepting the old abonnement's notificaties (each is processed once), or
+change it to refuse them.
 {% endhint %}
 
 {% hint style="warning" %}
