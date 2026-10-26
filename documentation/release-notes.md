@@ -1,13 +1,20 @@
 # Release notes
 
-Changes per version.
-
 ## 1.0.0-V12
 
 For Valtimo 12.45.0 and later 12.x versions.
 
-- Notificaties API plugin under key `notificatiesapi-manual`: a copy of the standard Valtimo 12 Notificaties API plugin
-  with manual abonnement registration (gzac-issues#971). A configuration registers its abonnement (channel `objecten`)
-  automatically, or an administrator creates it in Open Notificaties (manual); the configuration form then shows the
-  callback URL and the channel the abonnement must contain.
-- Accepted notificaties are processed like those of the standard plugin (Verzoek, Portaaltaak).
+---
+
+## New Features
+
+### Manual abonnement registration
+
+Receive notificaties from Open Notificaties when all traffic goes through a gateway that checks certificates. Select
+**Manual** in **Abonnement registration**, enter a shared secret, and create the abonnement in Open Notificaties
+yourself. The configuration form shows the callback URL and the channel the abonnement must contain.
+
+Notificaties are processed like those of the standard Notificaties API plugin: **Verzoek** and **Portaaltaak** receive
+them.
+
+**[Try it out →](plugin.md)**

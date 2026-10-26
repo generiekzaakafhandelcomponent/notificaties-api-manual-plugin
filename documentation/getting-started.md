@@ -1,6 +1,7 @@
 # Getting Started
 
-For using the plugin in a GZAC application, see [Plugin](plugin.md).
+For installing the plugin in a GZAC application, see [Installation and technical details](technical-details.md); for
+configuring it, see [Plugin](plugin.md).
 
 For working on the plugin:
 

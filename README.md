@@ -16,7 +16,8 @@ you upgrade.
 
 ## Documentation
 
-- [Plugin](documentation/plugin.md) — installation, configuration, Open Notificaties steps, limitations
+- [Plugin](documentation/plugin.md) — configuration in the user interface and Open Notificaties steps, for administrators
+- [Installation and technical details](documentation/technical-details.md) — installation, configuration rules, callback behaviour, for developers
 - [Example application](documentation/example-application.md) — running the sandbox application locally
 - [Release notes](documentation/release-notes.md)
 
