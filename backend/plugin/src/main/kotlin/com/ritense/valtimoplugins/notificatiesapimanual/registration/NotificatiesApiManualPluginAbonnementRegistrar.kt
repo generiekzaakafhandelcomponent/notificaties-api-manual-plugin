@@ -411,7 +411,14 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
 
         ensureKanalenExist(kanalen.map { it.naam }.toSet(), plugin.authenticationPluginConfiguration, plugin.url)
 
-        val currentAbonnement = currentLink?.let { link -> abonnementenInApi.firstOrNull { it.url == link.url } }
+        // By id: the same server can be reached under two URLs, which then list the same abonnement differently.
+        val currentAbonnement =
+            currentLink?.let { link ->
+                abonnementenInApi.firstOrNull {
+                    it.getId() ==
+                        link.getAbonnementId()
+                }
+            }
         val desiredCallbackUrl = plugin.callbackUrl.toASCIIString()
 
         val abonnement =
@@ -488,7 +495,7 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         abonnementenInApi
             .filter { abonnement ->
                 abonnement.callbackUrl == callbackUrl &&
-                    knownLinks.none { it.url == abonnement.url }
+                    knownLinks.none { it.getAbonnementId() == abonnement.getId() }
             }.forEach { abonnement ->
                 client.deleteAbonnement(plugin.authenticationPluginConfiguration, plugin.url, abonnement.getId()!!)
                 logger.info { "Successfully deleted stale abonnement '${abonnement.getId()}' not tracked locally" }

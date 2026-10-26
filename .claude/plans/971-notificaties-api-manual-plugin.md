@@ -81,7 +81,9 @@ Backend:
      `DefaultBearerTokenResolver` (any case, when OAuth2 resource server is on) take such a header as a token and
      reject it before the callback runs. The #971 docs warn about this; here it is enforced.
    - `authHeader` without leading/trailing whitespace (HTTP strips it from header values, so it could never match).
-   - `authHeader` at most 255 characters (the link column). Open Notificaties allows 1000; a longer key would create a
+   - `authHeader` only printable ASCII (Open Notificaties sends header values as Latin-1).
+   - `authHeader` at most 255 characters (the link column; the form input has the same limit).
+   - `callbackUrl` must not end in core's `/api/v1/notificatiesapi/callback` (core's endpoint would answer 401). Open Notificaties allows 1000; a longer key would create a
      remote abonnement and then fail saving the link row, creating another abonnement on every sweep.
    - `callbackUrl` must differ from the `callbackUrl` of every core `notificatiesapi` configuration, so that the
      stale-abonnement cleanup of either side can never match the other's abonnementen (both delete abonnementen on
@@ -168,7 +170,7 @@ Backend:
 
 Frontend (`@valtimo-plugins/notificaties-api-manual`): copy of the #971 core frontend plugin with `pluginId`
 `notificatiesapi-manual`, renamed classes/selectors (see names table), the service pointing at the
-fork endpoint, own test ids, translations (nl/en/de) with the title above and the callback placeholder
+fork endpoint, own test ids, translations (nl/en/de; every language must have every key, Valtimo has no fallback) with the title above and the callback placeholder
 `https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback`. Components: configuration (with registration
 select, shared secret, manual panel), `publish-notificatie`, `receive-notificatie`. The manual panel text also says
 that kanalen of core Notificaties API listeners on the same URL are included.
@@ -235,6 +237,18 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
 - **Core listeners matched by URL**, not by an extra "covers" property: zero configuration for the common case (one
   Open Notificaties); duplicates are harmless because of the idempotence key.
 - **Fork listener fails like core's**: consistent retry semantics; at-least-once delivery is documented.
+
+### Review decisions (code breaker rounds)
+
+- Round 1, "docs are still the template" (AC 10) as mustFix: handled in the Verify step (docs written there and checked
+  by a docs breaker), not in the code loop.
+- Round 1 fixes: v12 logs via `mu.KotlinLogging` (Valtimo 12 ships microutils kotlin-logging, not oshai); `de`
+  translations on both lines (Valtimo has no fallback language); shared secret input `maxLength` 255; shared secret
+  restricted to printable ASCII (Open Notificaties sends headers as Latin-1); a callback URL ending in core's
+  `/api/v1/notificatiesapi/callback` is rejected; abonnementen are matched by id, not full URL (aliases of one server).
+- Left over (not fixed): one unreachable Open Notificaties stops the sweep for later URL groups (inherited from core);
+  no IT that runs a `receive-notificatie` link through the real inbound queue (unit-tested only); no permanent v12 IT
+  for an id change (verified by the breaker, unit-tested in the listener).
 
 ## Risks
 

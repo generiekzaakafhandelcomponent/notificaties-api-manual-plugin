@@ -85,6 +85,7 @@
 
   <v-input
     name="authHeader"
+    [maxLength]="255"
     [attr.data-test-id]="testIds.authHeader"
     [title]="(obs.manual ? 'sharedSecret' : 'authHeader') | pluginTranslate: pluginId | async"
     [margin]="true"

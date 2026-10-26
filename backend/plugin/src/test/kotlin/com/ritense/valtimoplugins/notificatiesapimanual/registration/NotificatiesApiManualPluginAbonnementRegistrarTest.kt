@@ -432,7 +432,11 @@ class NotificatiesApiManualPluginAbonnementRegistrarTest {
                 ).copy(url = "${ON_URL}abonnement/${created.size}")
                 .also { created += it }
         }
-        whenever(client.getAbonnementen(any(), any())).thenAnswer { created.toList() }
+        // ...and lists them under the URL it is asked on.
+        whenever(client.getAbonnementen(any(), any())).thenAnswer { invocation ->
+            val baseUrl = invocation.getArgument<URI>(1).toString()
+            created.map { it.copy(url = "${baseUrl}abonnement/${it.getId()}") }
+        }
 
         registrar.registerAbonnementen()
 
