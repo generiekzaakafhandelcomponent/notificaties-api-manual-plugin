@@ -97,7 +97,7 @@ class NotificatiesApiManualPluginAutoConfiguration {
             threadNamePrefix = "notificaties-api-manual-plugin-abonnement-registration-"
             corePoolSize = 1
             maxPoolSize = 1
-            queueCapacity = 10
+            // Unbounded: cleanups after deleted configurations are not coalesced, and none may be rejected.
             setDaemon(true)
             setWaitForTasksToCompleteOnShutdown(false)
             initialize()

@@ -125,7 +125,8 @@ Backend:
    a time; events that arrive while a sweep is pending share it (a case import with N links gives one sweep, not N).
    Failures are logged, so an unreachable Open Notificaties never turns an unrelated save into a 500.
    The cleanup after a deleted configuration runs on that thread too, so a running sweep can't save a link for it
-   afterwards. A configuration id change during a running sweep can still leave an orphan link (left over).
+   afterwards. Every sweep also removes links of configurations that no longer exist (a cleanup lost on shutdown,
+   an id change during a running sweep), after which the stale cleanup removes their abonnement.
    Changed `authHeader`: Open Notificaties never returns `auth` (write-only), so the "unchanged" check compares the
    desired key with the `auth` stored in this plugin's link row, not with the API response. Different → update.
    Comparing with the API response would send a PUT on every sweep, and every PUT makes Open Notificaties call the
@@ -280,7 +281,7 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
   versions and recommended later. Global switch; documented.
 - Process links copied on a BPMN-only redeploy publish no event, and on 13.41–13.50 deleting all links of a process
   definition publishes no delete event; those filters reach an Automatic abonnement on the next trigger or restart (as
-  core). A case import publishes one event per link, so it triggers one sweep per link (as core). Documented.
+  core). A case import publishes one event per link; those share one sweep. Documented.
 - Validation also runs on autodeploy: a `.pluginconfig.json` that breaks a rule (callback shared with core, Manual and
   Automatic sharing a callback, a `Bearer…` secret) stops startup on Valtimo 13, as any invalid plugin configuration
   does; on Valtimo 12 the configuration (and the rest of that file) is skipped and logged. Documented.

@@ -492,6 +492,46 @@ class NotificatiesApiManualPluginAbonnementRegistrarTest {
         verifyNoInteractions(client)
     }
 
+    @Test
+    fun `a sweep removes the link of a removed configuration and then its abonnement`() {
+        plugins += TestFixtures.plugin()
+        links +=
+            NotificatiesApiManualPluginAbonnementLink(
+                NotificatiesApiManualPluginConfigurationId(UUID.randomUUID()),
+                "${ON_URL}abonnement/orphan",
+                "old-key",
+            )
+        whenever(client.getAbonnementen(any(), any()))
+            .thenReturn(listOf(Abonnement(url = "${ON_URL}abonnement/orphan", callbackUrl = CALLBACK_URL, auth = null)))
+
+        registrar.registerAbonnementen()
+
+        verify(linkRepository).delete(argThat<NotificatiesApiManualPluginAbonnementLink> { url.endsWith("/orphan") })
+        verify(client).deleteAbonnement(any(), any(), eq("orphan"))
+    }
+
+    @Test
+    fun `a rejected sweep doesn't stop later sweeps`() {
+        var reject = false
+        val queue = ArrayDeque<Runnable>()
+        val queued =
+            registrarWith {
+                if (reject) {
+                    reject = false
+                    throw java.util.concurrent.RejectedExecutionException("full")
+                }
+                queue.add(it)
+            }
+        queued.handleApplicationFullyReadyEvent()
+        queue.clear()
+        reject = true
+
+        queued.handleProcessLinkCreatedEvent(ProcessLinkCreatedEvent("plugin", "process:1"))
+        queued.handleProcessLinkCreatedEvent(ProcessLinkCreatedEvent("plugin", "process:1"))
+
+        assertEquals(1, queue.size)
+    }
+
     private fun registrarWith(executor: java.util.concurrent.Executor) =
         NotificatiesApiManualPluginAbonnementRegistrar(
             client,

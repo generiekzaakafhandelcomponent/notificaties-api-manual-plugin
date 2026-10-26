@@ -201,13 +201,18 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
      */
     private fun requestSweep() {
         if (!applicationFullyReady || !sweepPending.compareAndSet(false, true)) return
-        registrationExecutor.execute {
-            sweepPending.set(false)
-            try {
-                registerAbonnementen()
-            } catch (e: Exception) {
-                logger.error(e) { "Could not register the abonnementen of this plugin's automatic configurations" }
+        try {
+            registrationExecutor.execute {
+                sweepPending.set(false)
+                try {
+                    registerAbonnementen()
+                } catch (e: Exception) {
+                    logger.error(e) { "Could not register the abonnementen of this plugin's automatic configurations" }
+                }
             }
+        } catch (e: Exception) {
+            sweepPending.set(false)
+            logger.error(e) { "Could not schedule the registration of this plugin's abonnementen" }
         }
     }
 
@@ -230,6 +235,7 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
 
         // Kept up to date during the sweep, so a later URL group never takes a link saved now for stale.
         val knownLinks = linkRepository.findAll().toMutableList()
+        removeLinksOfRemovedConfigurations(knownLinks, kanaalFilters.configurations)
         val protectedCallbackUrls = kanaalFilters.manualCallbackUrls() + coreCallbackUrls
 
         groups.forEach { (_, group) ->
@@ -261,6 +267,22 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                         "Notificaties. Give the core configuration its own callback URL (/api/v1/notificatiesapi/callback)."
                 }
             }
+    }
+
+    /**
+     * A link of a configuration that no longer exists (its cleanup was lost, e.g. on shutdown) would make its abonnement
+     * look tracked forever. Without the link, the stale cleanup below removes the abonnement.
+     */
+    private fun removeLinksOfRemovedConfigurations(
+        knownLinks: MutableList<NotificatiesApiManualPluginAbonnementLink>,
+        configurations: List<NotificatiesApiManualPlugin>,
+    ) {
+        val existingIds = configurations.map { it.configurationId.id }.toSet()
+        knownLinks.filter { it.configurationId.id !in existingIds }.forEach { link ->
+            requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
+            knownLinks.remove(link)
+            logger.info { "Removed the abonnement link '${link.url}' of a removed plugin configuration" }
+        }
     }
 
     /**
@@ -329,9 +351,15 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         val link =
             linkRepository.findById(NotificatiesApiManualPluginConfigurationId(configurationId)).orElse(null) ?: return
         val plugin =
-            runCatching {
-                pluginService.createInstance(deletedConfiguration) as NotificatiesApiManualPlugin
-            }.getOrNull()
+            if (properties.registerAbonnementen) {
+                runCatching {
+                    pluginService.createInstance(
+                        deletedConfiguration,
+                    ) as NotificatiesApiManualPlugin
+                }.getOrNull()
+            } else {
+                null
+            }
 
         withLoggingContext(PluginConfiguration::class.java.canonicalName to configurationId.toString()) {
             if (plugin?.isManualAbonnementRegistration() == true || !properties.registerAbonnementen) {
