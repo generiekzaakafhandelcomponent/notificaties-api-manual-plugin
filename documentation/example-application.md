@@ -82,4 +82,4 @@ The sandbox turns off the automatic registration of the standard Notificaties AP
 
    The answer is `204`. The case continues and shows the resource URL of the notificatie. With another secret the
    answer is `401`, without one `403`. A notificatie identical to one received before is ignored (still `204`);
-   the command above makes each one unique.
+   the command above makes each one unique per second.
