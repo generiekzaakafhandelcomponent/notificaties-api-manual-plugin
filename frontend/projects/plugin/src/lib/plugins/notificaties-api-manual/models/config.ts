@@ -25,25 +25,7 @@ interface NotificatiesApiManualPluginConfig extends PluginConfigurationData {
   abonnementRegistration?: NotificatiesApiManualPluginAbonnementRegistration;
 }
 
-interface NotificatiesApiManualPluginPublishNotificatieConfig {
-  kanaal: string;
-  hoofdObject: string;
-  resource: string;
-  resourceUrl: string;
-  actie: string;
-  aanmaakdatum?: string;
-  kenmerken?: {[key: string]: string};
-}
-
-interface NotificatiesApiManualPluginReceiveNotificatieConfig {
-  kanaal?: string;
-  actie?: string;
-  kenmerken?: {[key: string]: string};
-}
-
 export {
   NotificatiesApiManualPluginAbonnementRegistration,
   NotificatiesApiManualPluginConfig,
-  NotificatiesApiManualPluginPublishNotificatieConfig,
-  NotificatiesApiManualPluginReceiveNotificatieConfig,
 };

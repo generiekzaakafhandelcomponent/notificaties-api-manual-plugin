@@ -19,6 +19,7 @@ package com.ritense.valtimoplugins.notificatiesapimanual.manual
 import com.ritense.notificatiesapi.NotificatiesApiListener
 import com.ritense.notificatiesapi.NotificatiesApiPlugin
 import com.ritense.notificatiesapi.domain.Abonnement
+import com.ritense.plugin.annotation.PluginCategory
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
@@ -54,12 +55,7 @@ class NotificatiesApiManualPluginManualAbonnementService(
         if (!plugin.isManualAbonnementRegistration()) return null
 
         val url = normalize(plugin.url)
-        val objectMapper = pluginService.getObjectMapper()
-        val ownKanalen =
-            pluginProcessLinkRepository
-                .findByPluginDefinitionKeyAndPluginActionDefinitionKey(PLUGIN_KEY, RECEIVE_NOTIFICATIE_ACTION_KEY)
-                .filter { it.pluginConfigurationId?.id == configurationId }
-                .mapNotNull { NotificatiesApiManualPluginKanaalFilters.toKanaal(it, objectMapper) }
+        val ownKanalen = receiveKanalen(PLUGIN_KEY, setOf(configurationId))
 
         return ManualAbonnement(
             callbackUrl = plugin.callbackUrl.toASCIIString(),
@@ -96,12 +92,7 @@ class NotificatiesApiManualPluginManualAbonnementService(
                 .filterIsInstance<NotificatiesApiPlugin>()
                 .map { it.notificatiesApiConfigurationId.id }
                 .toSet()
-        val objectMapper = pluginService.getObjectMapper()
-        val coreReceiveKanalen =
-            pluginProcessLinkRepository
-                .findByPluginDefinitionKeyAndPluginActionDefinitionKey(CORE_PLUGIN_KEY, RECEIVE_NOTIFICATIE_ACTION_KEY)
-                .filter { it.pluginConfigurationId?.id in coreConfigurationIds }
-                .mapNotNull { NotificatiesApiManualPluginKanaalFilters.toKanaal(it, objectMapper) }
+        val coreReceiveKanalen = receiveKanalen(CORE_PLUGIN_KEY, coreConfigurationIds)
 
         val otherListenerKanalen =
             listeners
@@ -118,6 +109,17 @@ class NotificatiesApiManualPluginManualAbonnementService(
         return coreReceiveKanalen + otherListenerKanalen
     }
 
+    private fun receiveKanalen(
+        pluginKey: String,
+        configurationIds: Set<UUID>,
+    ): List<Abonnement.Kanaal> =
+        NotificatiesApiManualPluginKanaalFilters.kanalen(
+            pluginProcessLinkRepository
+                .findByPluginDefinitionKeyAndPluginActionDefinitionKey(pluginKey, RECEIVE_NOTIFICATIE_ACTION_KEY)
+                .filter { it.pluginConfigurationId?.id in configurationIds },
+            pluginService.getObjectMapper(),
+        )
+
     data class ManualAbonnement(
         val callbackUrl: String,
         val kanalen: List<Abonnement.Kanaal>,
@@ -125,6 +127,10 @@ class NotificatiesApiManualPluginManualAbonnementService(
 
     companion object {
         private val logger = KotlinLogging.logger {}
-        private const val CORE_LISTENER_CATEGORY = "notificaties-api-plugin"
+        private val CORE_LISTENER_CATEGORY =
+            NotificatiesApiListener::class.java
+                .getAnnotation(
+                    PluginCategory::class.java,
+                ).key
     }
 }

@@ -25,5 +25,3 @@ export * from './lib/plugins/notificaties-api-manual/notificaties-api-manual-plu
 export * from './lib/plugins/notificaties-api-manual/notificaties-api-manual-plugin.specification';
 export * from './lib/plugins/notificaties-api-manual/components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
 export * from './lib/plugins/notificaties-api-manual/components/manual-abonnement/notificaties-api-manual-plugin-manual-abonnement.component';
-export * from './lib/plugins/notificaties-api-manual/components/publish-notificatie/notificaties-api-manual-plugin-publish-notificatie.component';
-export * from './lib/plugins/notificaties-api-manual/components/receive-notificatie/notificaties-api-manual-plugin-receive-notificatie.component';

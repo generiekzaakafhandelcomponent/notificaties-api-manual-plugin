@@ -16,33 +16,29 @@
 
 import {NgModule} from '@angular/core';
 import {NotificatiesApiManualPluginConfigurationComponent} from './components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
-import {NotificatiesApiManualPluginPublishNotificatieComponent} from './components/publish-notificatie/notificaties-api-manual-plugin-publish-notificatie.component';
-import {NotificatiesApiManualPluginReceiveNotificatieComponent} from './components/receive-notificatie/notificaties-api-manual-plugin-receive-notificatie.component';
 import {NotificatiesApiManualPluginManualAbonnementComponent} from './components/manual-abonnement/notificaties-api-manual-plugin-manual-abonnement.component';
-import {PluginTranslatePipeModule} from '@valtimo/plugin';
+// The publish/receive action forms are core's: they take their texts from this plugin's translations via pluginId.
+import {NotificatiesApiPluginModule, PluginTranslatePipeModule} from '@valtimo/plugin';
 import {CommonModule} from '@angular/common';
 import {
-  CarbonMultiInputModule,
   FormModule,
   InputModule,
   ParagraphModule,
   SelectModule,
 } from '@valtimo/components';
-import {NotificationModule} from 'carbon-components-angular';
 
 @NgModule({
-  declarations: [NotificatiesApiManualPluginConfigurationComponent, NotificatiesApiManualPluginPublishNotificatieComponent, NotificatiesApiManualPluginReceiveNotificatieComponent],
+  declarations: [NotificatiesApiManualPluginConfigurationComponent],
   imports: [
     CommonModule,
+    NotificatiesApiPluginModule,
     NotificatiesApiManualPluginManualAbonnementComponent,
     PluginTranslatePipeModule,
     FormModule,
     InputModule,
     SelectModule,
     ParagraphModule,
-    CarbonMultiInputModule,
-    NotificationModule,
   ],
-  exports: [NotificatiesApiManualPluginConfigurationComponent, NotificatiesApiManualPluginPublishNotificatieComponent, NotificatiesApiManualPluginReceiveNotificatieComponent],
+  exports: [NotificatiesApiManualPluginConfigurationComponent],
 })
 export class NotificatiesApiManualPluginModule {}

@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-import {PluginSpecification} from '@valtimo/plugin';
+import {
+  notificatiesApiPluginSpecification,
+  PluginSpecification,
+  PublishNotificatieConfigurationComponent,
+  ReceiveNotificatieConfigurationComponent,
+} from '@valtimo/plugin';
 import {NotificatiesApiManualPluginConfigurationComponent} from './components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
-import {NotificatiesApiManualPluginPublishNotificatieComponent} from './components/publish-notificatie/notificaties-api-manual-plugin-publish-notificatie.component';
-import {NotificatiesApiManualPluginReceiveNotificatieComponent} from './components/receive-notificatie/notificaties-api-manual-plugin-receive-notificatie.component';
-import {NOTIFICATIES_API_MANUAL_PLUGIN_LOGO_BASE64} from './assets/notificaties-api-manual-plugin-logo';
 
 const notificatiesApiManualPluginSpecification: PluginSpecification = {
   pluginId: 'notificatiesapi-manual',
   pluginConfigurationComponent: NotificatiesApiManualPluginConfigurationComponent,
-  pluginLogoBase64: NOTIFICATIES_API_MANUAL_PLUGIN_LOGO_BASE64,
+  pluginLogoBase64: notificatiesApiPluginSpecification.pluginLogoBase64,
   functionConfigurationComponents: {
-    'publish-notificatie': NotificatiesApiManualPluginPublishNotificatieComponent,
-    'receive-notificatie': NotificatiesApiManualPluginReceiveNotificatieComponent,
+    'publish-notificatie': PublishNotificatieConfigurationComponent,
+    'receive-notificatie': ReceiveNotificatieConfigurationComponent,
   },
   pluginTranslations: {
     nl: {

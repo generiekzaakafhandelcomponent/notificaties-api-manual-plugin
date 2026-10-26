@@ -22,6 +22,7 @@ import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.OTHER_ON_UR
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.receiveLink
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.AbonnementRegistration.MANUAL
 import org.junit.jupiter.api.Test
+import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -65,21 +66,13 @@ class NotificatiesApiManualPluginKanaalFiltersTest {
 
     @Test
     fun `a manual configuration's links never go into an automatic abonnement`() {
-        assertFalse(filters.automaticKanaalFilters(listOf(automatic, manual)).any { it.naam == "objecten" })
-    }
-
-    @Test
-    fun `a manual configuration gets only its own links, not building-block links`() {
-        assertEquals(
-            listOf(Abonnement.Kanaal(naam = "objecten", filters = mapOf("actie" to "create"))),
-            filters.manualKanaalFilters(manual.configurationId.id),
-        )
+        assertFalse(filters.automaticKanaalFilters(filters.automaticConfigurations()).any { it.naam == "objecten" })
     }
 
     @Test
     fun `manual configurations are recognised by URL and callback`() {
-        assertTrue(filters.hasManualConfiguration(TestFixtures.ON_URL.trimEnd('/')))
-        assertFalse(filters.hasManualConfiguration(OTHER_ON_URL))
+        assertTrue(filters.hasManualConfiguration(URI(TestFixtures.ON_URL.trimEnd('/'))))
+        assertFalse(filters.hasManualConfiguration(URI(OTHER_ON_URL)))
         assertEquals(setOf(TestFixtures.CALLBACK_URL), filters.manualCallbackUrls())
         assertEquals(listOf(automatic, otherUrlAutomatic), filters.automaticConfigurations())
     }

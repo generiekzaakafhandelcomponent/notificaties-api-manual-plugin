@@ -27,7 +27,6 @@ import com.ritense.plugin.events.PluginConfigurationDeletedEvent
 import com.ritense.plugin.events.PluginConfigurationIdUpdatedEvent
 import com.ritense.plugin.events.PluginConfigurationUpdatedEvent
 import com.ritense.plugin.repository.PluginProcessLinkRepository
-import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
 import com.ritense.processlink.event.ProcessLinkCreatedEvent
 import com.ritense.processlink.event.ProcessLinkDeletedEvent
@@ -37,7 +36,6 @@ import com.ritense.valtimoplugins.notificatiesapimanual.config.NotificatiesApiMa
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginAbonnementLink
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginConfigurationId
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin
-import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.CALLBACK_URL_PROPERTY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.CORE_PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.coreCallbackUrls
@@ -55,6 +53,7 @@ import java.security.SecureRandom
 import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Registers the abonnementen of this plugin's automatic configurations in Open Notificaties: one abonnement per
@@ -64,13 +63,14 @@ import java.util.concurrent.Executor
  * Differences with core:
  * - a `receive-notificatie` link only goes into the abonnement of its own configuration's URL;
  * - stale cleanup never deletes an abonnement whose callback is that of a manual configuration of this plugin or of a
- *   core configuration;
+ *   core configuration, and matches abonnementen by id (one server can be reached under two URLs);
  * - a changed `authHeader` updates the abonnement (Open Notificaties never returns `auth`, so the stored link is
  *   compared instead);
- * - deleted process links trigger a sweep too.
+ * - deleted process links trigger a sweep too; sweeps triggered by events run on the registration executor, one at a
+ *   time, and several events before a sweep starts (e.g. a case import) share one sweep.
  *
- * @param registrationExecutor executor the startup registration is handed off to, so the retry loop never blocks
- * the event thread.
+ * @param registrationExecutor executor all sweeps run on, so they never block the event thread or a request, and
+ * never run at the same time.
  */
 class NotificatiesApiManualPluginAbonnementRegistrar(
     private val client: NotificatiesApiClient,
@@ -82,9 +82,8 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
     private val registrationExecutor: Executor = Executor { it.run() },
 ) {
     /**
-     * The listeners below run during `afterCommit`, where a REQUIRED write would join the already committed
-     * transaction and be discarded silently. REQUIRES_NEW is also the right semantics: the abonnement already
-     * exists remotely by then, so a rollback could not undo it.
+     * Writes from `afterCommit` listeners must not join the already committed transaction (they would be discarded
+     * silently). REQUIRES_NEW is also the right semantics: the abonnement already exists remotely by then.
      */
     private val requiresNewTransactionTemplate =
         TransactionTemplate(transactionManager).apply {
@@ -93,6 +92,8 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
 
     @Volatile
     private var applicationFullyReady = false
+
+    private val sweepPending = AtomicBoolean(false)
 
     @EventListener(ApplicationFullyReadyEvent::class)
     fun handleApplicationFullyReadyEvent() {
@@ -148,12 +149,12 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
     fun handlePluginConfigurationCreatedEvent(event: PluginConfigurationCreatedEvent) {
-        handlePluginConfigurationChanged(event.pluginConfiguration)
+        if (isRelevant(event.pluginConfiguration)) requestSweep()
     }
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
     fun handlePluginConfigurationUpdatedEvent(event: PluginConfigurationUpdatedEvent) {
-        handlePluginConfigurationChanged(event.pluginConfiguration)
+        if (isRelevant(event.pluginConfiguration)) requestSweep()
     }
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
@@ -167,52 +168,50 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                 logger.error(e) { "Could not clean up after the removed plugin configuration" }
             }
         }
-        registerAbonnementenSafely()
+        requestSweep()
     }
 
+    // The events carry no plugin key, so every plugin process link triggers a sweep, as in core.
     @TransactionalEventListener(phase = AFTER_COMMIT)
     fun handleProcessLinkCreatedEvent(event: ProcessLinkCreatedEvent) {
-        handleProcessLinkChanged(event.processLinkType)
+        if (event.processLinkType == "plugin") requestSweep()
     }
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
     fun handleProcessLinkUpdatedEvent(event: ProcessLinkUpdatedEvent) {
-        handleProcessLinkChanged(event.processLinkType)
+        if (event.processLinkType == "plugin") requestSweep()
     }
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
     fun handleProcessLinkDeletedEvent(event: ProcessLinkDeletedEvent) {
-        handleProcessLinkChanged(event.processLinkType)
-    }
-
-    private fun handlePluginConfigurationChanged(pluginConfiguration: PluginConfiguration) {
-        if (!applicationFullyReady || !isRelevant(pluginConfiguration)) return
-        registerAbonnementenSafely()
-    }
-
-    // The events carry no plugin key, so every plugin process link triggers a sweep, as in core.
-    private fun handleProcessLinkChanged(processLinkType: String) {
-        if (!applicationFullyReady || processLinkType != "plugin") return
-        registerAbonnementenSafely()
+        if (event.processLinkType == "plugin") requestSweep()
     }
 
     // Core configurations are relevant too: their callback URL decides what the stale cleanup may delete.
     private fun isRelevant(pluginConfiguration: PluginConfiguration): Boolean =
         pluginConfiguration.pluginDefinition.key in setOf(PLUGIN_KEY, CORE_PLUGIN_KEY)
 
-    // Throwing out of afterCommit reports a failure for a change that is already committed; log it instead.
-    private fun registerAbonnementenSafely() {
-        try {
-            registerAbonnementen()
-        } catch (e: Exception) {
-            logger.error(e) { "Could not register the abonnementen of this plugin's automatic configurations" }
+    /**
+     * Runs a sweep on the registration executor. Events that arrive while one is pending share it; a failure is
+     * logged, as the change that triggered it is already committed.
+     */
+    private fun requestSweep() {
+        if (!applicationFullyReady || !sweepPending.compareAndSet(false, true)) return
+        registrationExecutor.execute {
+            sweepPending.set(false)
+            try {
+                registerAbonnementen()
+            } catch (e: Exception) {
+                logger.error(e) { "Could not register the abonnementen of this plugin's automatic configurations" }
+            }
         }
     }
 
-    @JvmOverloads
     fun registerAbonnementen(attemptsPerUrl: Int = DEFAULT_ATTEMPTS) {
+        val kanaalFilters =
+            NotificatiesApiManualPluginKanaalFilters.fromPluginService(pluginService, pluginProcessLinkRepository)
         val coreCallbackUrls = coreCallbackUrls(pluginService)
-        warnAboutCallbackUrlsSharedWithCore(coreCallbackUrls)
+        warnAboutCallbackUrlsSharedWithCore(kanaalFilters.configurations, coreCallbackUrls)
 
         if (!properties.registerAbonnementen) {
             logger.info {
@@ -222,17 +221,12 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
             return
         }
 
-        val kanaalFilters =
-            NotificatiesApiManualPluginKanaalFilters.fromPluginService(
-                pluginService,
-                pluginProcessLinkRepository,
-            )
         val groups = kanaalFilters.automaticConfigurations().groupBy { normalize(it.url) }
         if (groups.isEmpty()) return
 
         // Kept up to date during the sweep, so a later URL group never takes a link saved now for stale.
         val knownLinks = linkRepository.findAll().toMutableList()
-        val protectedCallbackUrls = ProtectedCallbackUrls(kanaalFilters.manualCallbackUrls(), coreCallbackUrls)
+        val protectedCallbackUrls = kanaalFilters.manualCallbackUrls() + coreCallbackUrls
 
         groups.forEach { (_, group) ->
             val plugin = owner(group, knownLinks)
@@ -245,6 +239,40 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                 removeAbonnementenOfOtherMembers(plugin, group, knownLinks)
             }
         }
+    }
+
+    /**
+     * Core's stale cleanup deletes every untracked abonnement whose callback URL is that of a core configuration. A
+     * configuration of this plugin with the same callback URL (only possible when a core configuration is saved later;
+     * this plugin's validation refuses it the other way round) would lose its abonnement, a manual one included.
+     * Runs on every sweep, also when there is nothing to register.
+     */
+    private fun warnAboutCallbackUrlsSharedWithCore(
+        configurations: List<NotificatiesApiManualPlugin>,
+        coreCallbackUrls: Set<String>,
+    ) {
+        configurations
+            .filter { normalize(it.callbackUrl) in coreCallbackUrls }
+            .forEach {
+                logger.error {
+                    "Plugin configuration '${it.configurationId.id}' uses callback URL '${it.callbackUrl}', which a " +
+                        "core Notificaties API configuration uses too. Core will delete its abonnement in Open " +
+                        "Notificaties. Give the core configuration its own callback URL (/api/v1/notificatiesapi/callback)."
+                }
+            }
+    }
+
+    /**
+     * The configuration whose link holds the abonnement of a URL group: the one that already has a link, else the
+     * lowest id. Core takes the first in query order, which can change between sweeps and orphan an abonnement.
+     */
+    private fun owner(
+        group: List<NotificatiesApiManualPlugin>,
+        knownLinks: List<NotificatiesApiManualPluginAbonnementLink>,
+    ): NotificatiesApiManualPlugin {
+        val linkedIds = knownLinks.map { it.configurationId.id }.toSet()
+        return group.filter { it.configurationId.id in linkedIds }.minByOrNull { it.configurationId.id }
+            ?: group.minBy { it.configurationId.id }
     }
 
     /**
@@ -261,59 +289,15 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
             .forEach { member ->
                 val link =
                     knownLinks.firstOrNull { it.configurationId.id == member.configurationId.id } ?: return@forEach
-                try {
+                deleteRemoteAbonnement(link) {
                     client.deleteAbonnement(
                         member.authenticationPluginConfiguration,
                         member.url,
                         link.getAbonnementId(),
                     )
-                    logger.info {
-                        "Deleted abonnement '${link.url}'; its URL group's abonnement is now held by another configuration"
-                    }
-                } catch (e: Exception) {
-                    logger.error(e) { "Could not delete abonnement '${link.url}'; remove it in Open Notificaties" }
                 }
-                requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
                 knownLinks.remove(link)
             }
-    }
-
-    /**
-     * Core's stale cleanup deletes every untracked abonnement whose callback URL is that of a core configuration. A
-     * configuration of this plugin with the same callback URL (only possible when a core configuration is saved later;
-     * this plugin's validation refuses it the other way round) would lose its abonnement, a manual one included.
-     * Runs on every sweep and every core or plugin configuration change, also when there is nothing to register.
-     */
-    private fun warnAboutCallbackUrlsSharedWithCore(coreCallbackUrls: Set<String>) {
-        if (coreCallbackUrls.isEmpty()) return
-        pluginService
-            .getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = PLUGIN_KEY))
-            .mapNotNull { configuration ->
-                configuration.properties
-                    ?.path(CALLBACK_URL_PROPERTY)
-                    ?.textValue()
-                    ?.let { configuration.id.id to it }
-            }.filter { (_, callbackUrl) -> normalize(callbackUrl) in coreCallbackUrls }
-            .forEach { (id, callbackUrl) ->
-                logger.error {
-                    "Plugin configuration '$id' uses callback URL '$callbackUrl', which a core Notificaties API " +
-                        "configuration uses too. Core will delete its abonnement in Open Notificaties. Give the core " +
-                        "configuration its own callback URL (/api/v1/notificatiesapi/callback)."
-                }
-            }
-    }
-
-    /**
-     * The configuration whose link holds the abonnement of a URL group: the one that already has a link, else the
-     * lowest id. Core takes the first in query order, which can change between sweeps and orphan an abonnement.
-     */
-    private fun owner(
-        group: List<NotificatiesApiManualPlugin>,
-        knownLinks: List<NotificatiesApiManualPluginAbonnementLink>,
-    ): NotificatiesApiManualPlugin {
-        val linkedIds = knownLinks.map { it.configurationId.id }.toSet()
-        return group.filter { it.configurationId.id in linkedIds }.minByOrNull { it.configurationId.id }
-            ?: group.minBy { it.configurationId.id }
     }
 
     /** A changed configuration id (core publishes no delete for it) keeps its abonnement. */
@@ -334,52 +318,50 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         }
     }
 
+    /**
+     * Removes the link of a removed configuration, and its abonnement in Open Notificaties if Valtimo registered it.
+     * Nothing retries a failed remote delete, and the link of a removed configuration no longer authorises, so the
+     * link goes either way and a failure names the abonnement for the administrator.
+     */
     private fun removeAbonnementForDeletedConfiguration(deletedConfiguration: PluginConfiguration) {
-        val configurationId = NotificatiesApiManualPluginConfigurationId(deletedConfiguration.id.id)
-        val link = linkRepository.findById(configurationId).orElse(null) ?: return
+        val configurationId = deletedConfiguration.id.id
+        val link =
+            linkRepository.findById(NotificatiesApiManualPluginConfigurationId(configurationId)).orElse(null) ?: return
         val plugin =
             runCatching {
-                pluginService.createInstance(deletedConfiguration) as? NotificatiesApiManualPlugin
+                pluginService.createInstance(deletedConfiguration) as NotificatiesApiManualPlugin
             }.getOrNull()
 
-        if (plugin == null) {
-            requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
-            logger.error {
-                "Could not delete abonnement '${link.url}' of removed plugin configuration '${configurationId.id}'; " +
-                    "remove it in Open Notificaties"
-            }
-            return
-        }
-        if (plugin.isManualAbonnementRegistration() || !properties.registerAbonnementen) {
-            requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
-            logger.info {
-                "Removed the abonnement link of removed plugin configuration '${configurationId.id}'; " +
-                    "its abonnement in Open Notificaties is left untouched"
-            }
-            return
-        }
-
-        withLoggingContext(PluginConfiguration::class.java.canonicalName to configurationId.id.toString()) {
-            try {
-                retry {
-                    client.deleteAbonnement(
-                        authentication = plugin.authenticationPluginConfiguration,
-                        baseUrl = plugin.url,
-                        abonnementId = link.getAbonnementId(),
-                    )
-                }
-                logger.info {
-                    "Successfully deleted abonnement '${link.getAbonnementId()}' of removed plugin configuration"
-                }
-            } catch (e: Exception) {
-                // Nothing retries this later, and the link of a removed configuration no longer authorises.
-                logger.error(e) {
-                    "Could not delete abonnement '${link.url}' of removed plugin configuration " +
-                        "'${configurationId.id}'; remove it in Open Notificaties"
-                }
-            } finally {
+        withLoggingContext(PluginConfiguration::class.java.canonicalName to configurationId.toString()) {
+            if (plugin?.isManualAbonnementRegistration() == true || !properties.registerAbonnementen) {
                 requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
+                logger.info { "Removed the abonnement link of removed plugin configuration '$configurationId'" }
+            } else {
+                deleteRemoteAbonnement(link) {
+                    checkNotNull(plugin) { "The removed plugin configuration can't be instantiated" }
+                    retry {
+                        client.deleteAbonnement(
+                            plugin.authenticationPluginConfiguration,
+                            plugin.url,
+                            link.getAbonnementId(),
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    private fun deleteRemoteAbonnement(
+        link: NotificatiesApiManualPluginAbonnementLink,
+        delete: () -> Unit,
+    ) {
+        try {
+            delete()
+            logger.info { "Deleted abonnement '${link.url}'" }
+        } catch (e: Exception) {
+            logger.error(e) { "Could not delete abonnement '${link.url}'; remove it in Open Notificaties" }
+        } finally {
+            requiresNewTransactionTemplate.executeWithoutResult { linkRepository.delete(link) }
         }
     }
 
@@ -388,12 +370,12 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         group: List<NotificatiesApiManualPlugin>,
         knownLinks: List<NotificatiesApiManualPluginAbonnementLink>,
         kanaalFilters: NotificatiesApiManualPluginKanaalFilters,
-        protectedCallbackUrls: ProtectedCallbackUrls,
+        protectedCallbackUrls: Set<String>,
     ): NotificatiesApiManualPluginAbonnementLink {
         val abonnementenInApi = client.getAbonnementen(plugin.authenticationPluginConfiguration, plugin.url)
 
         // An administrator's abonnement for a manual configuration cannot be told apart from a stale one.
-        if (kanaalFilters.hasManualConfiguration(plugin.url.toString())) {
+        if (kanaalFilters.hasManualConfiguration(plugin.url)) {
             logger.info {
                 "Not deleting untracked abonnementen in Open Notificaties, because a configuration of this plugin on " +
                     "the same URL registers its abonnement manually"
@@ -402,58 +384,46 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
             deleteStaleAbonnementen(plugin, abonnementenInApi, knownLinks, protectedCallbackUrls)
         }
 
-        val kanalen = kanaalFilters.automaticKanaalFilters(group)
         val currentLink = knownLinks.firstOrNull { it.configurationId.id == plugin.configurationId.id }
         val authKey =
             plugin.authHeader?.takeIf { it.isNotBlank() }
                 ?: currentLink?.auth?.takeIf { it.isNotBlank() }
                 ?: createRandomKey()
-
-        ensureKanalenExist(kanalen.map { it.naam }.toSet(), plugin.authenticationPluginConfiguration, plugin.url)
+        val desired =
+            Abonnement(
+                callbackUrl = plugin.callbackUrl.toASCIIString(),
+                auth = authKey,
+                kanalen = kanaalFilters.automaticKanaalFilters(group),
+            )
+        ensureKanalenExist(
+            desired.kanalen.map { it.naam }.toSet(),
+            plugin.authenticationPluginConfiguration,
+            plugin.url,
+        )
 
         // By id: the same server can be reached under two URLs, which then list the same abonnement differently.
-        val currentAbonnement =
+        val current =
             currentLink?.let { link ->
-                abonnementenInApi.firstOrNull {
-                    it.getId() ==
-                        link.getAbonnementId()
-                }
+                abonnementenInApi.firstOrNull { it.getId() == link.getAbonnementId() }
             }
-        val desiredCallbackUrl = plugin.callbackUrl.toASCIIString()
-
         val abonnement =
-            if (currentAbonnement == null) {
-                client
-                    .createAbonnement(
-                        plugin.authenticationPluginConfiguration,
-                        plugin.url,
-                        Abonnement(callbackUrl = desiredCallbackUrl, auth = authKey, kanalen = kanalen),
-                    ).also { logger.info { "Successfully created abonnement '${it.getId()}'" } }
-            } else {
+            when {
+                current == null ->
+                    client
+                        .createAbonnement(plugin.authenticationPluginConfiguration, plugin.url, desired)
+                        .also { logger.info { "Successfully created abonnement '${it.getId()}'" } }
                 // Open Notificaties never returns auth, so the key it has is the one stored in the link.
-                val unchanged =
-                    currentAbonnement.callbackUrl == desiredCallbackUrl &&
-                        currentAbonnement.kanalen.toSet() == kanalen.toSet() &&
-                        currentLink.auth == authKey
-                if (unchanged) {
-                    logger.debug {
-                        "Skipping update of abonnement '${currentAbonnement.getId()}' because it is unchanged"
-                    }
-                    currentAbonnement
-                } else {
+                current.callbackUrl == desired.callbackUrl &&
+                    current.kanalen.toSet() == desired.kanalen.toSet() &&
+                    currentLink.auth == authKey -> current
+                else ->
                     client
                         .updateAbonnement(
-                            authentication = plugin.authenticationPluginConfiguration,
-                            baseUrl = plugin.url,
-                            abonnementId = currentLink.getAbonnementId(),
-                            abonnement =
-                                Abonnement(
-                                    callbackUrl = desiredCallbackUrl,
-                                    auth = authKey,
-                                    kanalen = kanalen,
-                                ),
+                            plugin.authenticationPluginConfiguration,
+                            plugin.url,
+                            currentLink.getAbonnementId(),
+                            desired,
                         ).also { logger.info { "Successfully updated abonnement '${it.getId()}'" } }
-                }
             }
 
         // A stale link (abonnement unknown in Open Notificaties) has the same key and is overwritten here.
@@ -472,30 +442,19 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         plugin: NotificatiesApiManualPlugin,
         abonnementenInApi: List<Abonnement>,
         knownLinks: List<NotificatiesApiManualPluginAbonnementLink>,
-        protectedCallbackUrls: ProtectedCallbackUrls,
+        protectedCallbackUrls: Set<String>,
     ) {
         val callbackUrl = plugin.callbackUrl.toString()
-        if (normalize(callbackUrl) in protectedCallbackUrls.core) {
-            logger.error {
-                "Not deleting untracked abonnementen in Open Notificaties: a core Notificaties API " +
-                    "configuration uses " +
-                    "the same callback URL '$callbackUrl'. Give this plugin's configuration its own callback URL " +
-                    "(/api/v1/notificatiesapi-manual/callback)."
-            }
-            return
-        }
-        if (normalize(callbackUrl) in protectedCallbackUrls.manual) {
+        if (normalize(callbackUrl) in protectedCallbackUrls) {
             logger.info {
-                "Not deleting untracked abonnementen in Open Notificaties: a manual configuration " +
-                    "of this plugin uses " +
-                    "the same callback URL '$callbackUrl'"
+                "Not deleting untracked abonnementen in Open Notificaties: callback URL '$callbackUrl' is also " +
+                    "used by a manual configuration of this plugin or a core configuration"
             }
             return
         }
         abonnementenInApi
             .filter { abonnement ->
-                abonnement.callbackUrl == callbackUrl &&
-                    knownLinks.none { it.getAbonnementId() == abonnement.getId() }
+                abonnement.callbackUrl == callbackUrl && knownLinks.none { it.getAbonnementId() == abonnement.getId() }
             }.forEach { abonnement ->
                 client.deleteAbonnement(plugin.authenticationPluginConfiguration, plugin.url, abonnement.getId()!!)
                 logger.info { "Successfully deleted stale abonnement '${abonnement.getId()}' not tracked locally" }
@@ -527,7 +486,7 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                 return block()
             } catch (e: Exception) {
                 lastException = e
-                if (times > 1) logger.warn(e) { "Attempt ${it + 1} of $times to register the abonnement failed" }
+                if (times > 1) logger.warn(e) { "Attempt ${it + 1} of $times to call Open Notificaties failed" }
             }
         }
         throw lastException!!
@@ -538,11 +497,6 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         SecureRandom().nextBytes(bytes)
         return Base64.getEncoder().encodeToString(bytes)
     }
-
-    private class ProtectedCallbackUrls(
-        val manual: Set<String>,
-        val core: Set<String>,
-    )
 
     companion object {
         private val logger = KotlinLogging.logger {}

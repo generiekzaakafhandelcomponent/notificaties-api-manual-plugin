@@ -18,21 +18,21 @@ package com.ritense.valtimoplugins.notificatiesapimanual.registration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ritense.notificatiesapi.domain.Abonnement
+import com.ritense.notificatiesapi.listener.ReceiveNotificatieProperties
 import com.ritense.plugin.domain.PluginProcessLink
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
-import com.ritense.valtimoplugins.notificatiesapimanual.listener.ReceiveNotificatieProperties
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.RECEIVE_NOTIFICATIE_ACTION_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.normalize
-import java.util.UUID
+import java.net.URI
 
 /**
  * Attributes the kanaal filters of this plugin's `receive-notificatie` process links to its configurations: a link
- * belongs to the abonnement of its own configuration's Open Notificaties URL, and a manual configuration's links never
- * go into an automatic abonnement. Links without a configuration (building blocks) go into every automatic abonnement.
+ * belongs to the abonnement of its own configuration's Open Notificaties URL. Links without a configuration (building
+ * blocks) would go into every automatic abonnement, but core's link query never returns them.
  */
 class NotificatiesApiManualPluginKanaalFilters(
     val configurations: List<NotificatiesApiManualPlugin>,
@@ -45,24 +45,16 @@ class NotificatiesApiManualPluginKanaalFilters(
     fun manualConfigurations(): List<NotificatiesApiManualPlugin> =
         configurations.filter { it.isManualAbonnementRegistration() }
 
-    fun hasManualConfiguration(url: String): Boolean =
-        manualConfigurations().any { normalize(it.url) == normalize(url) }
+    fun hasManualConfiguration(url: URI): Boolean = manualConfigurations().any { normalize(it.url) == normalize(url) }
 
     fun manualCallbackUrls(): Set<String> = manualConfigurations().map { normalize(it.callbackUrl) }.toSet()
 
     /** Kanaal filters of one automatic abonnement, for the automatic configurations of one Open Notificaties URL. */
     fun automaticKanaalFilters(group: List<NotificatiesApiManualPlugin>): List<Abonnement.Kanaal> {
-        val groupIds = group.filter { !it.isManualAbonnementRegistration() }.map { it.configurationId.id }.toSet()
-        return kanaalFilters { it == null || it in groupIds }
+        val groupIds = group.map { it.configurationId.id }.toSet()
+        val links = receiveLinks.filter { link -> link.pluginConfigurationId?.id.let { it == null || it in groupIds } }
+        return kanalen(links, objectMapper)
     }
-
-    fun manualKanaalFilters(configurationId: UUID): List<Abonnement.Kanaal> = kanaalFilters { it == configurationId }
-
-    private fun kanaalFilters(linkedTo: (UUID?) -> Boolean): List<Abonnement.Kanaal> =
-        receiveLinks
-            .filter { linkedTo(it.pluginConfigurationId?.id) }
-            .mapNotNull { toKanaal(it, objectMapper) }
-            .distinct()
 
     companion object {
         fun fromPluginService(
@@ -81,20 +73,22 @@ class NotificatiesApiManualPluginKanaalFilters(
             objectMapper = pluginService.getObjectMapper(),
         )
 
-        /** The kanaal filter of a `receive-notificatie` link, in the shape of an abonnement kanaal; null without kanaal. */
-        fun toKanaal(
-            link: PluginProcessLink,
+        /** The kanaal filters of `receive-notificatie` links, in the shape of abonnement kanalen; links without kanaal are skipped. */
+        fun kanalen(
+            links: List<PluginProcessLink>,
             objectMapper: ObjectMapper,
-        ): Abonnement.Kanaal? {
-            val properties = link.actionProperties ?: return null
-            val notificatie = objectMapper.treeToValue(properties, ReceiveNotificatieProperties::class.java)
-            val kanaal = notificatie.kanaal?.takeIf { it.isNotBlank() } ?: return null
-            val filters =
-                buildMap {
-                    notificatie.actie?.takeIf { it.isNotBlank() }?.let { put("actie", it) }
-                    notificatie.kenmerken?.let { putAll(it) }
-                }
-            return Abonnement.Kanaal(naam = kanaal, filters = filters)
-        }
+        ): List<Abonnement.Kanaal> =
+            links
+                .mapNotNull { link ->
+                    val properties = link.actionProperties ?: return@mapNotNull null
+                    val notificatie = objectMapper.treeToValue(properties, ReceiveNotificatieProperties::class.java)
+                    val kanaal = notificatie.kanaal?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    val filters =
+                        buildMap {
+                            notificatie.actie?.takeIf { it.isNotBlank() }?.let { put("actie", it) }
+                            notificatie.kenmerken?.let { putAll(it) }
+                        }
+                    Abonnement.Kanaal(naam = kanaal, filters = filters)
+                }.distinct()
     }
 }

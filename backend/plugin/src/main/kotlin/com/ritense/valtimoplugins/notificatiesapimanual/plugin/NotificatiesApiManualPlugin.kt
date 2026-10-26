@@ -18,6 +18,7 @@ package com.ritense.valtimoplugins.notificatiesapimanual.plugin
 
 import com.ritense.logging.withLoggingContext
 import com.ritense.notificatiesapi.NotificatiesApiAuthentication
+import com.ritense.notificatiesapi.NotificatiesApiPlugin
 import com.ritense.notificatiesapi.client.NotificatiesApiClient
 import com.ritense.notificatiesapi.domain.Notificatie
 import com.ritense.plugin.annotation.Plugin
@@ -41,6 +42,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.ValidationException
 import java.net.URI
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Copy of the core Notificaties API plugin (key `notificatiesapi`) under its own key, with manual abonnement
@@ -80,36 +82,38 @@ class NotificatiesApiManualPlugin(
 
     @PluginEvent(invokedOn = [EventType.CREATE, EventType.UPDATE])
     fun validateConfiguration() {
-        val secret = authHeader
-        if (isManualAbonnementRegistration() && secret.isNullOrBlank()) {
+        authHeader?.let { secret ->
+            // Valtimo's JWT filter and Spring's bearer token resolver take such a header as a (malformed) token.
+            if (secret.startsWith("bearer", ignoreCase = true)) {
+                throw ValidationException("The shared secret (authHeader) must not start with 'Bearer'")
+            }
+            // HTTP strips whitespace around header values, so such a secret could never match.
+            if (secret.isNotBlank() && secret != secret.trim()) {
+                throw ValidationException("The shared secret (authHeader) must not start or end with whitespace")
+            }
+            // Open Notificaties sends header values as Latin-1; plain printable ASCII is safe on every hop.
+            if (secret.any { it !in ' '..'~' }) {
+                throw ValidationException("The shared secret (authHeader) may only contain printable ASCII characters")
+            }
+            if (secret.length > MAX_AUTH_HEADER_LENGTH) {
+                throw ValidationException(
+                    "The shared secret (authHeader) must be at most $MAX_AUTH_HEADER_LENGTH characters",
+                )
+            }
+        }
+        if (isManualAbonnementRegistration() && authHeader.isNullOrBlank()) {
             throw ValidationException(
                 "A shared secret (authHeader) is required when the abonnement is registered manually",
             )
         }
-        // Valtimo's JWT filter and Spring's bearer token resolver take such a header as a (malformed) token.
-        if (secret != null && secret.startsWith("bearer", ignoreCase = true)) {
-            throw ValidationException("The shared secret (authHeader) must not start with 'Bearer'")
-        }
-        if (secret != null && secret.isNotBlank() && secret != secret.trim()) {
-            // HTTP strips whitespace around header values, so such a secret could never match.
-            throw ValidationException("The shared secret (authHeader) must not start or end with whitespace")
-        }
-        // Open Notificaties sends header values as Latin-1; plain printable ASCII is safe on every hop.
-        if (secret != null && secret.any { it !in ' '..'~' }) {
-            throw ValidationException("The shared secret (authHeader) may only contain printable ASCII characters")
-        }
-        if (secret != null && secret.length > MAX_AUTH_HEADER_LENGTH) {
-            throw ValidationException(
-                "The shared secret (authHeader) must be at most $MAX_AUTH_HEADER_LENGTH characters",
-            )
-        }
+        val callback = normalize(callbackUrl)
         // Core's endpoint only accepts core's own keys, so every notificatie would get 401 there.
-        if (normalize(callbackUrl).endsWith(CORE_CALLBACK_PATH)) {
+        if (callback.endsWith(CORE_CALLBACK_PATH)) {
             throw ValidationException(
                 "The callback URL points at core's endpoint; use /api/v1/notificatiesapi-manual/callback",
             )
         }
-        if (coreCallbackUrls(pluginService).contains(normalize(callbackUrl))) {
+        if (callback in coreCallbackUrls(pluginService)) {
             throw ValidationException(
                 "The callback URL is already used by a core Notificaties API configuration; " +
                     "use this plugin's callback endpoint (/api/v1/notificatiesapi-manual/callback)",
@@ -117,9 +121,11 @@ class NotificatiesApiManualPlugin(
         }
         // Automatic stale cleanup must be able to tell an administrator's abonnement from a stale one.
         val clashing =
-            otherConfigurationsOfThisPlugin()
-                .filter { it.manual != isManualAbonnementRegistration() }
-                .any { it.callbackUrl == normalize(callbackUrl) }
+            storedRegistrations(pluginService).any {
+                it.id != configurationId.id &&
+                    it.manual != isManualAbonnementRegistration() &&
+                    it.callbackUrl == callback
+            }
         if (clashing) {
             throw ValidationException(
                 "A manual and an automatic configuration can't share a callback URL; use " +
@@ -127,25 +133,6 @@ class NotificatiesApiManualPlugin(
             )
         }
     }
-
-    private fun otherConfigurationsOfThisPlugin(): List<StoredRegistration> =
-        pluginService
-            .getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = PLUGIN_KEY))
-            .filter { it.id.id != configurationId.id }
-            .map { configuration ->
-                val properties = configuration.properties
-                StoredRegistration(
-                    manual =
-                        properties?.path(ABONNEMENT_REGISTRATION_PROPERTY)?.textValue() ==
-                            AbonnementRegistration.MANUAL.value,
-                    callbackUrl = properties?.path(CALLBACK_URL_PROPERTY)?.textValue()?.let { normalize(it) },
-                )
-            }
-
-    private class StoredRegistration(
-        val manual: Boolean,
-        val callbackUrl: String?,
-    )
 
     @PluginAction(
         key = "publish-notificatie",
@@ -194,9 +181,9 @@ class NotificatiesApiManualPlugin(
     companion object {
         private val logger = KotlinLogging.logger {}
         const val PLUGIN_KEY = "notificatiesapi-manual"
-        const val CORE_PLUGIN_KEY = "notificatiesapi"
+        const val CORE_PLUGIN_KEY = NotificatiesApiPlugin.NOTIFICATIES_API_PLUGIN_DEFINITION_KEY
         const val CORE_CALLBACK_PATH = "/api/v1/notificatiesapi/callback"
-        const val RECEIVE_NOTIFICATIE_ACTION_KEY = "receive-notificatie"
+        const val RECEIVE_NOTIFICATIE_ACTION_KEY = NotificatiesApiPlugin.RECEIVE_NOTIFICATIE_ACTION_KEY
         const val AUTH_HEADER_PROPERTY = "authHeader"
         const val ABONNEMENT_REGISTRATION_PROPERTY = "abonnementRegistration"
         const val CALLBACK_URL_PROPERTY = "callbackUrl"
@@ -213,5 +200,31 @@ class NotificatiesApiManualPlugin(
                 .mapNotNull { it.properties?.path(CALLBACK_URL_PROPERTY)?.textValue() }
                 .map { normalize(it) }
                 .toSet()
+
+        /**
+         * The stored properties of this plugin's configurations, without instantiating them (which would also resolve
+         * their authentication configuration).
+         */
+        fun storedRegistrations(pluginService: PluginService): List<StoredRegistration> =
+            pluginService
+                .getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = PLUGIN_KEY))
+                .map { configuration ->
+                    val properties = configuration.properties
+                    StoredRegistration(
+                        id = configuration.id.id,
+                        manual =
+                            properties?.path(ABONNEMENT_REGISTRATION_PROPERTY)?.textValue() ==
+                                AbonnementRegistration.MANUAL.value,
+                        callbackUrl = properties?.path(CALLBACK_URL_PROPERTY)?.textValue()?.let { normalize(it) },
+                        secret = properties?.path(AUTH_HEADER_PROPERTY)?.textValue(),
+                    )
+                }
     }
+
+    data class StoredRegistration(
+        val id: UUID,
+        val manual: Boolean,
+        val callbackUrl: String?,
+        val secret: String?,
+    )
 }

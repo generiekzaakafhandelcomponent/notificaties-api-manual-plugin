@@ -22,6 +22,7 @@ import com.ritense.authorization.annotation.RunWithoutAuthorization
 import com.ritense.case.service.CaseDefinitionService
 import com.ritense.document.domain.impl.request.NewDocumentRequest
 import com.ritense.notificatiesapi.event.NotificatiesApiNotificationReceivedEvent
+import com.ritense.notificatiesapi.listener.ReceiveNotificatieProperties
 import com.ritense.plugin.domain.PluginProcessLink
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.processdocument.domain.ProcessDefinitionId
