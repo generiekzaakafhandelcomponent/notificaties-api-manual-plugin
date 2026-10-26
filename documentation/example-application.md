@@ -10,6 +10,7 @@ Run the Gradle commands from the **project root** directory and the npm commands
 
 - Java 17 or later
 - [Docker (Desktop)](https://www.docker.com/products/docker-desktop/)
+- Node.js 20 (nvm recommended)
 
 ### Start docker
 
@@ -60,8 +61,9 @@ The source code is split up into two modules:
 ## Trying the plugin
 
 1. Log in as `admin` and go to **Admin** > **Plugins**. Open **Notificaties API, handmatig abonnement (Autodeployed)**:
-   the form shows **Manual** registration and, below it, the callback URL and the channel the abonnement must contain.
-2. Send a notificatie to the callback address, as Open Notificaties would:
+   the form shows **Manual** (**Handmatig**) registration and, below it, the callback URL and the channel the abonnement must contain.
+2. Send a notificatie straight to the callback address, as Open Notificaties would (this skips Open Notificaties; to go
+   through it, first create kanaal `objecten` and an abonnement as described in [Plugin](plugin.md)):
 
    ```shell
    curl -i -X POST localhost:8080/api/v1/notificatiesapi-manual/callback/manual \
