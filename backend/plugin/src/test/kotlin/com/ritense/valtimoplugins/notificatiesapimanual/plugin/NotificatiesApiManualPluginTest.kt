@@ -97,6 +97,12 @@ class NotificatiesApiManualPluginTest {
     }
 
     @Test
+    fun `a shared secret with characters outside printable ASCII is rejected`() {
+        assertThrows<ValidationException> { plugin(MANUAL, secret = "geheim€").validateConfiguration() }
+        assertThrows<ValidationException> { plugin(MANUAL, secret = "geheim\u0000").validateConfiguration() }
+    }
+
+    @Test
     fun `a shared secret longer than the link column is rejected`() {
         assertThrows<ValidationException> { plugin(MANUAL, secret = "x".repeat(256)).validateConfiguration() }
         assertDoesNotThrow { plugin(MANUAL, secret = "x".repeat(255)).validateConfiguration() }
@@ -117,6 +123,13 @@ class NotificatiesApiManualPluginTest {
         }
 
         assertThrows<ValidationException> { plugin(AUTOMATIC).validateConfiguration() }
+    }
+
+    @Test
+    fun `a callback URL that points at core's endpoint is rejected`() {
+        assertThrows<ValidationException> {
+            TestFixtures.plugin(callbackUrl = CORE_CALLBACK_URL, pluginService = pluginService).validateConfiguration()
+        }
     }
 
     @Test

@@ -23,7 +23,7 @@ dockerCompose {
     }
 }
 
-val kotlinLoggingVersion: String by project
+val microutilsKotlinLoggingVersion: String by project
 val mockitoKotlinVersion: String by project
 val valtimoVersion: String by project
 val okhttpVersion: String by project
@@ -43,7 +43,8 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-security")
     compileOnly("org.springframework.boot:spring-boot-starter-validation")
 
-    compileOnly("io.github.oshai:kotlin-logging:$kotlinLoggingVersion")
+    // Valtimo 12 ships microutils kotlin-logging (mu.KotlinLogging), not the io.github.oshai one.
+    compileOnly("io.github.microutils:kotlin-logging:$microutilsKotlinLoggingVersion")
 
     // Testing
     testImplementation("com.ritense.valtimo:notificaties-api")
@@ -54,7 +55,6 @@ dependencies {
     testImplementation("com.ritense.valtimo:logging:$valtimoVersion")
     testImplementation("com.ritense.valtimo:local-resource")
     testImplementation("com.ritense.valtimo:test-utils-common")
-    testImplementation("io.github.oshai:kotlin-logging:$kotlinLoggingVersion")
 
     testImplementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")

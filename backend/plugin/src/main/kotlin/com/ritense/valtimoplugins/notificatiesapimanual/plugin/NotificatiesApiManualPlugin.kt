@@ -34,8 +34,8 @@ import com.ritense.valtimoplugins.notificatiesapimanual.domain.AbonnementRegistr
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginAbonnementLink
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginConfigurationId
 import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginAbonnementLinkRepository
-import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.ValidationException
+import mu.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.web.client.HttpClientErrorException
 import java.net.URI
@@ -166,9 +166,19 @@ class NotificatiesApiManualPlugin(
             // HTTP strips whitespace around header values, so such a secret could never match.
             throw ValidationException("The shared secret (authHeader) must not start or end with whitespace")
         }
+        // Open Notificaties sends header values as Latin-1; plain printable ASCII is safe on every hop.
+        if (secret != null && secret.any { it !in ' '..'~' }) {
+            throw ValidationException("The shared secret (authHeader) may only contain printable ASCII characters")
+        }
         if (secret != null && secret.length > MAX_AUTH_HEADER_LENGTH) {
             throw ValidationException(
                 "The shared secret (authHeader) must be at most $MAX_AUTH_HEADER_LENGTH characters",
+            )
+        }
+        // Core's endpoint only accepts core's own keys, so every notificatie would get 401 there.
+        if (normalize(callbackUrl).endsWith(CORE_CALLBACK_PATH)) {
+            throw ValidationException(
+                "The callback URL points at core's endpoint; use /api/v1/notificatiesapi-manual/callback",
             )
         }
         if (coreCallbackUrls(pluginService).contains(normalize(callbackUrl))) {
@@ -242,6 +252,7 @@ class NotificatiesApiManualPlugin(
         private val logger = KotlinLogging.logger {}
         const val PLUGIN_KEY = "notificatiesapi-manual"
         const val CORE_PLUGIN_KEY = "notificatiesapi"
+        const val CORE_CALLBACK_PATH = "/api/v1/notificatiesapi/callback"
         const val AUTH_HEADER_PROPERTY = "authHeader"
         const val ABONNEMENT_REGISTRATION_PROPERTY = "abonnementRegistration"
         const val CALLBACK_URL_PROPERTY = "callbackUrl"
