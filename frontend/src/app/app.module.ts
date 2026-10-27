@@ -54,23 +54,22 @@ import {
   WidgetModule,
 } from "@valtimo/components";
 import {BrowserModule} from "@angular/platform-browser";
-import {BuildingBlockManagementModule} from "@valtimo/building-block-management";
-import {CaseManagementModule} from "@valtimo/case-management";
+import {DossierManagementModule} from "@valtimo/dossier-management";
 import {CaseMigrationModule} from "@valtimo/case-migration";
 import {ChoiceFieldModule} from "@valtimo/choice-field";
 import {CommonModule} from "@angular/common";
-import {ConfigModule, ConfigService, CustomMultiTranslateHttpLoaderFactory, LocalizationService} from "@valtimo/shared";
+import {ConfigModule, ConfigService, CustomMultiTranslateHttpLoaderFactory, LocalizationService} from "@valtimo/config";
 import {DashboardManagementModule} from "@valtimo/dashboard-management";
 import {DashboardModule} from "@valtimo/dashboard";
 import {DecisionModule} from "@valtimo/decision";
 import {
-  CaseDetailTabAuditComponent,
-  CaseDetailTabDocumentsComponent,
-  CaseDetailTabProgressComponent,
-  CaseDetailTabSummaryComponent,
-  CaseModule,
+  DossierDetailTabAuditComponent,
+  DossierDetailTabDocumentsComponent,
+  DossierDetailTabProgressComponent,
+  DossierDetailTabSummaryComponent,
+  DossierModule,
   DefaultTabs,
-} from "@valtimo/case";
+} from "@valtimo/dossier";
 import {DocumentModule} from "@valtimo/document";
 import {FormManagementModule} from "@valtimo/form-management";
 import {FormModule} from "@valtimo/form";
@@ -93,19 +92,21 @@ import {SecurityModule} from "@valtimo/security";
 import {SseModule} from "@valtimo/sse";
 import {SwaggerModule} from "@valtimo/swagger";
 import {TaskModule} from "@valtimo/task";
-import {TeamsModule} from "@valtimo/teams";
 import {TranslateLoader, TranslateModule} from "@ngx-translate/core";
 import {environment} from "../environments/environment";
 import {registerDocumentenApiFormioUploadComponent, ZgwModule} from "@valtimo/zgw";
 
-import {SamplePluginModule, samplePluginSpecification,} from "@valtimo-plugins/sample-plugin";
+import {
+  NotificatiesApiManualPluginModule,
+  notificatiesApiManualPluginSpecification,
+} from "@valtimo-plugins/notificaties-api-manual";
 
 export function tabsFactory() {
   return new Map<string, object>([
-    [DefaultTabs.summary, CaseDetailTabSummaryComponent],
-    [DefaultTabs.progress, CaseDetailTabProgressComponent],
-    [DefaultTabs.audit, CaseDetailTabAuditComponent],
-    [DefaultTabs.documents, CaseDetailTabDocumentsComponent],
+    [DefaultTabs.summary, DossierDetailTabSummaryComponent],
+    [DefaultTabs.progress, DossierDetailTabProgressComponent],
+    [DefaultTabs.audit, DossierDetailTabAuditComponent],
+    [DefaultTabs.documents, DossierDetailTabDocumentsComponent],
   ]);
 }
 
@@ -120,10 +121,9 @@ export function tabsFactory() {
     BootstrapModule,
     BpmnJsDiagramModule,
     BrowserModule,
-    BuildingBlockManagementModule,
-    CaseManagementModule,
+    DossierManagementModule,
     CaseMigrationModule,
-    CaseModule.forRoot(tabsFactory),
+    DossierModule.forRoot(tabsFactory),
     BesluitenApiPluginModule,
     CatalogiApiPluginModule,
     ChoiceFieldModule,
@@ -158,12 +158,11 @@ export function tabsFactory() {
     ProcessModule,
     ReactiveFormsModule,
     ResourceModule,
-    SamplePluginModule,
+    NotificatiesApiManualPluginModule,
     SecurityModule,
     SseModule,
     SwaggerModule,
     TaskModule,
-    TeamsModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -190,7 +189,7 @@ export function tabsFactory() {
         objecttypenApiPluginSpecification,
         openNotificatiesPluginSpecification,
         openZaakPluginSpecification,
-        samplePluginSpecification,
+        notificatiesApiManualPluginSpecification,
         zakenApiPluginSpecification,
       ],
     },

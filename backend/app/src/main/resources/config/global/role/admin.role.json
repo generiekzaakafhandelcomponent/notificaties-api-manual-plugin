@@ -1,4 +1,7 @@
-[
-    "ROLE_USER",
-    "ROLE_ADMIN"
-]
+{
+    "changesetId": "admin",
+    "roles": [
+        "ROLE_USER",
+        "ROLE_ADMIN"
+    ]
+}

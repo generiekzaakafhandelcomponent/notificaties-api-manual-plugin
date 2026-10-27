@@ -3,7 +3,7 @@
     "version": 1,
     "newProjectRoot": "projects",
     "projects": {
-        "gzac-plugin-template": {
+        "notificaties-api-manual-plugin": {
             "root": "",
             "sourceRoot": "src",
             "projectType": "application",
@@ -18,7 +18,7 @@
                     "builder": "@angular-devkit/build-angular:browser",
                     "options": {
                         "aot": false,
-                        "outputPath": "deployment/gzac-plugin-template",
+                        "outputPath": "deployment/notificaties-api-manual-plugin",
                         "index": "src/index.html",
                         "main": "src/main.ts",
                         "polyfills": "src/polyfills.ts",
@@ -33,7 +33,7 @@
                             },
                             {
                                 "glob": "**/*",
-                                "input": "node_modules/@valtimo/shared/assets/core",
+                                "input": "node_modules/@valtimo/config/assets/core",
                                 "output": "./valtimo-translation/core/"
                             },
                             {
@@ -61,7 +61,7 @@
                             "node_modules/bpmn-js/dist/assets/bpmn-font/css/bpmn.css",
                             "node_modules/bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css",
                             "node_modules/bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css",
-                            "node_modules/@bpmn-io/properties-panel/dist/assets/properties-panel.css",
+                            "node_modules/bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css",
                             "node_modules/ol/ol.css",
                             "node_modules/@valtimo/components/assets/css/ng-multiselect-dropdown.theme.scss",
                             "node_modules/@valtimo/layout/assets/css/app.css",
@@ -107,13 +107,13 @@
                 "serve": {
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "options": {
-                        "buildTarget": "gzac-plugin-template:build"
+                        "buildTarget": "notificaties-api-manual-plugin:build"
                     }
                 },
                 "extract-i18n": {
                     "builder": "@angular-devkit/build-angular:extract-i18n",
                     "options": {
-                        "buildTarget": "gzac-plugin-template:build"
+                        "buildTarget": "notificaties-api-manual-plugin:build"
                     }
                 },
                 "test": {
@@ -135,7 +135,7 @@
                 }
             }
         },
-        "@valtimo-plugins/sample-plugin": {
+        "@valtimo-plugins/notificaties-api-manual": {
             "projectType": "library",
             "root": "projects/plugin",
             "sourceRoot": "projects/plugin/src",
@@ -160,9 +160,11 @@
                 "test": {
                     "builder": "@angular-devkit/build-angular:karma",
                     "options": {
-                        "main": "projects/plugin/src/test.ts",
                         "tsConfig": "projects/plugin/tsconfig.spec.json",
-                        "karmaConfig": "projects/plugin/karma.conf.js"
+                        "polyfills": [
+                            "zone.js",
+                            "zone.js/testing"
+                        ]
                     }
                 },
                 "lint": {

@@ -1,22 +1,25 @@
-[
-    {
-        "resourceType": "com.ritense.note.domain.Note",
-        "actions": [
-            "view_list",
-            "create",
-            "modify",
-            "delete"
-        ],
-        "roleKey": "ROLE_ADMIN"
-    },
-    {
-        "resourceType": "com.ritense.note.domain.Note",
-        "actions": [
-            "view_list",
-            "create",
-            "modify",
-            "delete"
-        ],
-        "roleKey": "ROLE_USER"
-    }
-]
+{
+    "changesetId": "note",
+    "permissions": [
+        {
+            "resourceType": "com.ritense.note.domain.Note",
+            "actions": [
+                "view_list",
+                "create",
+                "modify",
+                "delete"
+            ],
+            "roleKey": "ROLE_ADMIN"
+        },
+        {
+            "resourceType": "com.ritense.note.domain.Note",
+            "actions": [
+                "view_list",
+                "create",
+                "modify",
+                "delete"
+            ],
+            "roleKey": "ROLE_USER"
+        }
+    ]
+}

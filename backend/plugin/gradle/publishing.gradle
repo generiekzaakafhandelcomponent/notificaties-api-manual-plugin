@@ -23,8 +23,8 @@ pluginManager.withPlugin("maven-publish") {
                 version = pluginProperties.pluginVersion
 
                 pom {
-                    name = "Sample plugin module"
-                    description = "A module containing a sample plugin"
+                    name = "Notificaties API manual plugin"
+                    description = "Notificaties API plugin with manual abonnement registration"
                     developers {
                         developer {
                             id = "team-valtimo"
