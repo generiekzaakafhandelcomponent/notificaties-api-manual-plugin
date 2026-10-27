@@ -58,11 +58,7 @@
     [required]="true"
     [trim]="true"
     [tooltip]="'callbackUrlTooltip' | pluginTranslate: pluginId | async"
-    [placeholder]="
-      obs.manual
-        ? 'https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback/manual'
-        : 'https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback'
-    "
+    placeholder="https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback"
   >
   </v-input>
   <ng-container

@@ -191,19 +191,6 @@ class NotificatiesApiManualPlugin(
                     "use this plugin's callback endpoint (/api/v1/notificatiesapi-manual/callback)",
             )
         }
-        // Automatic stale cleanup must be able to tell an administrator's abonnement from a stale one.
-        val clashing =
-            storedRegistrations(pluginService).any {
-                it.id != configurationId.id &&
-                    it.manual != isManualAbonnementRegistration() &&
-                    it.callbackUrl == callback
-            }
-        if (clashing) {
-            throw ValidationException(
-                "A manual and an automatic configuration can't share a callback URL; use " +
-                    "/api/v1/notificatiesapi-manual/callback/manual for manual configurations",
-            )
-        }
     }
 
     fun kanalen() = KANALEN.map { Abonnement.Kanaal(naam = it) }

@@ -31,8 +31,6 @@ class NotificatiesApiManualPluginHttpSecurityConfigurer : HttpSecurityConfigurer
                 requests
                     .requestMatchers(antMatcher(POST, "/api/v1/notificatiesapi-manual/callback"))
                     .permitAll()
-                    .requestMatchers(antMatcher(POST, "/api/v1/notificatiesapi-manual/callback/manual"))
-                    .permitAll()
                     .requestMatchers(
                         antMatcher(GET, "/api/management/v1/notificatiesapi-manual/configurations/*/manual-abonnement"),
                     ).hasAuthority(ADMIN)

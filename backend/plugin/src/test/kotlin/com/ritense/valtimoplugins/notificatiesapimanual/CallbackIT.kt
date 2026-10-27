@@ -141,15 +141,6 @@ class CallbackIT : BaseIntegrationTest() {
     }
 
     @Test
-    fun `accepts on the manual path too`() {
-        mockMvc
-            .perform(callback(SHARED_SECRET, path = "/api/v1/notificatiesapi-manual/callback/manual"))
-            .andExpect(status().isNoContent)
-
-        assertEquals(1, inboundEventRepository.count())
-    }
-
-    @Test
     @WithMockUser(authorities = [ADMIN])
     fun `shows an admin the callback URL of a manual configuration`() {
         mockMvc
@@ -221,7 +212,7 @@ class CallbackIT : BaseIntegrationTest() {
     companion object {
         const val SHARED_SECRET = "a-shared-secret"
         const val MANUAL_CALLBACK_URL =
-            "https://gateway.example.com/valtimo/api/v1/notificatiesapi-manual/callback/manual"
+            "https://gateway.example.com/valtimo/api/v1/notificatiesapi-manual/callback"
         const val MANUAL_VIEW_PATH = "/api/management/v1/notificatiesapi-manual/configurations/{id}/manual-abonnement"
     }
 }

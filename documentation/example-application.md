@@ -71,7 +71,7 @@ delivery that it retries and that is then ignored.
    through it, first create kanaal `objecten` and an abonnement as described in [Plugin](plugin.md)):
 
    ```shell
-   curl -i -X POST localhost:8080/api/v1/notificatiesapi-manual/callback/manual \
+   curl -i -X POST localhost:8080/api/v1/notificatiesapi-manual/callback \
      -H 'Authorization: local-shared-secret' -H 'Content-Type: application/json' \
      -d '{"kanaal":"objecten","hoofdObject":"http://x/1","resourceUrl":"http://x/'"$(date +%s)"'","actie":"create","aanmaakdatum":"'"$(date -u +%FT%T)"'","kenmerken":{}}'
    ```
