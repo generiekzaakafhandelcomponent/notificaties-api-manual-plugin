@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gzac-plugin-template
+    name: notificaties-api-manual-plugin
   profiles:
     active: dev
   jackson:
@@ -68,6 +68,10 @@ server:
 
 valtimo:
   database: postgres
+  zgw:
+    # The core Notificaties API configuration's callback (localhost:8080) is not reachable from the Open Notificaties
+    # container; on Valtimo 13.41 a failing core registration stops startup. This plugin has its own setting.
+    register-abonnementen: false
   app:
     scheme: http
   oauth:

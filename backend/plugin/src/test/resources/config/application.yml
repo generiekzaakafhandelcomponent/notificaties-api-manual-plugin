@@ -1,9 +1,10 @@
 spring:
   main:
-    allow-bean-definition-overriding: true
+    # Off on purpose: a bean of this plugin with the name of a core bean must fail the context.
+    allow-bean-definition-overriding: false
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:postgresql://localhost:54342/sample-plugin-test
+    url: jdbc:postgresql://localhost:54355/notificaties-api-manual-test
     username: test-user
     password: password
     driver-class-name: org.postgresql.Driver

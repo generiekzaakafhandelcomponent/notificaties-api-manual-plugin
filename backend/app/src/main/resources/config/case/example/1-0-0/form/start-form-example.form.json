@@ -6,7 +6,7 @@
             "type": "htmlelement",
             "input": false,
             "label": "Instructions",
-            "content": "Start a new example case. The sample plugin will call a Time API during execution.",
+            "content": "Start a new example case. The process then waits for a notificatie on kanaal objecten (actie create), received through the Notificaties API plugin with a manual abonnement.",
             "tableView": false,
             "refreshOnChange": false
         },

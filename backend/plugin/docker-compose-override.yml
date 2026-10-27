@@ -1,6 +1,6 @@
 services:
   db:
     ports:
-      - "54342:5432"
+      - "54355:5432"
     environment:
-      - POSTGRES_DB=sample-plugin-test
+      - POSTGRES_DB=notificaties-api-manual-test

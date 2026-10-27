@@ -28,8 +28,28 @@ jobs:
       - name: Test
         run: ./gradlew :backend:plugin:test
 
+  # valtimoVersion in gradle.properties is the minimum supported version (the published jar is built against it);
+  # this job checks that the plugin also works on the latest version of the same major.
+  backend-test-latest:
+    name: Backend tests (latest Valtimo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Test
+        run: ./gradlew :backend:plugin:test -PvaltimoVersion=13.51.0.RELEASE
+
   frontend-lint:
-    name: Frontend lint
+    name: Frontend lint, build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,4 +64,12 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        working-directory: frontend
+
+      - name: Build library
+        run: npx ng build @valtimo-plugins/notificaties-api-manual
+        working-directory: frontend
+
+      - name: Test library
+        run: npx ng test @valtimo-plugins/notificaties-api-manual --watch=false --browsers=ChromeHeadless
         working-directory: frontend
