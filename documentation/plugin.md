@@ -56,7 +56,7 @@ Fill in the properties and click **Save configuration**
 | Configuration ID | Optional; leave it empty to have one generated. |
 | Configuration name | The name under which the configuration can be found in the rest of the application. |
 | Notificaties API URL | The address of Open Notificaties, for example `https://opennotificaties.example.com/api/v1/`. |
-| Callback URL | The address where Open Notificaties sends notificaties. With **Automatic**: the address of Valtimo followed by `/api/v1/notificatiesapi-manual/callback`. With **Manual**: the address through which Open Notificaties reaches Valtimo via the gateway, followed by `/api/v1/notificatiesapi-manual/callback/manual`. |
+| Callback URL | The address where Open Notificaties sends notificaties: the address through which Open Notificaties reaches Valtimo, followed by `/api/v1/notificatiesapi-manual/callback`. With **Manual**, that is usually the address of the gateway. |
 | Abonnement registration | **Automatic** (the default) or **Manual**. |
 | Authentication header | Shown with **Automatic**. The secret that Valtimo places on the abonnement it registers. When left empty, the secret of the existing abonnement stays in use, or a random one is generated. |
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
@@ -66,9 +66,7 @@ Saving shows a general error message when:
 
 - the shared secret starts with the word `Bearer`, or contains special characters such as accented letters;
 - the callback URL is the address of the standard Notificaties API plugin (ending in `/api/v1/notificatiesapi/callback`),
-  or the callback URL of one of its configurations;
-- a **Manual** and an **Automatic** configuration of this plugin would get the same callback URL. That is why the two
-  have their own address: ending in `/callback` and in `/callback/manual`.
+  or the callback URL of one of its configurations.
 
 <details>
 <summary>Dutch labels</summary>
@@ -101,7 +99,8 @@ Open a new or existing configuration of this plugin
 Select **Manual** in **Abonnement registration**
 {% endstep %}
 {% step %}
-Enter the **Callback URL** ending in `/api/v1/notificatiesapi-manual/callback/manual`
+Enter the **Callback URL**: the address through which Open Notificaties reaches Valtimo via the gateway, followed by
+`/api/v1/notificatiesapi-manual/callback`
 {% endstep %}
 {% step %}
 Enter a **Shared secret**: a long, random value of letters and digits

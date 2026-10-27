@@ -36,7 +36,7 @@ idempotence key and is processed once.
 | Plugin title                 | Notificaties API                                 | Notificaties API (handmatig abonnement)                             |
 | Package                      | `com.ritense.notificatiesapi`                    | `com.ritense.valtimoplugins.notificatiesapimanual`                  |
 | Plugin category              | `notificaties-api-plugin`                        | none (the plugin does not implement core `NotificatiesApiListener`) |
-| Callback                     | `POST /api/v1/notificatiesapi/callback`          | `POST /api/v1/notificatiesapi-manual/callback` (Automatic) and `…/callback/manual` (Manual; same handler) |
+| Callback                     | `POST /api/v1/notificatiesapi/callback`          | `POST /api/v1/notificatiesapi-manual/callback` (Automatic and Manual) |
 | Manual view (main + v12)     | `GET /api/management/v1/notificatiesapi/configurations/{id}/manual-abonnement` | `GET /api/management/v1/notificatiesapi-manual/configurations/{id}/manual-abonnement` |
 | Link table / entity          | `notificaties_api_abonnement_link` / `NotificatiesApiAbonnementLink` | `notificaties_api_manual_abonnement_link` / `NotificatiesApiManualPluginAbonnementLink` (own embeddable id `NotificatiesApiManualPluginConfigurationId`) |
 | Liquibase master             | (core)                                           | `config/liquibase/notificaties-api-manual-master.xml`               |
@@ -91,10 +91,11 @@ Backend:
      the other way round, so every sweep — also one with nothing to register, i.e. a Manual-only install — logs an
      error for each configuration of this plugin whose callback URL a core configuration uses (core would delete its
      abonnement).
-   - A Manual configuration's `callbackUrl` must differ from every Automatic configuration's `callbackUrl` of this
-     plugin, and the other way round. Otherwise Automatic stale cleanup could not tell an administrator's abonnement
-     from a stale one. Two paths make that possible on one host: Automatic uses `/api/v1/notificatiesapi-manual/callback`,
-     Manual `/api/v1/notificatiesapi-manual/callback/manual` (same handler; the form placeholders say so).
+   - A Manual and an Automatic configuration of this plugin may share a `callbackUrl` (one endpoint,
+     `/api/v1/notificatiesapi-manual/callback`). Automatic stale cleanup can't tell an administrator's abonnement from a
+     stale one, so it is skipped when a Manual configuration uses the same Open Notificaties URL or callback URL.
+     (Earlier: a separate `…/callback/manual` path and a validation that the two differ; dropped as the cleanup guards
+     already protect the manual abonnement and one URL is simpler for administrators.)
 3. Automatic registration: copy of #971 `PluginsDeployedEventListener` + `NotificatiesApiKanaalFilters`, limited to
    configurations of `notificatiesapi-manual`
    (`getPluginConfigurations(PluginConfigurationSearchParameters(pluginDefinitionKey = "notificatiesapi-manual"))`).
@@ -299,8 +300,8 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
 - Process links copied on a BPMN-only redeploy publish no event, and on 13.41–13.50 deleting all links of a process
   definition publishes no delete event; those filters reach an Automatic abonnement on the next trigger or restart (as
   core). A case import publishes one event per link; those share one sweep. Documented.
-- Validation also runs on autodeploy: a `.pluginconfig.json` that breaks a rule (callback shared with core, Manual and
-  Automatic sharing a callback, a `Bearer…` secret) stops startup on Valtimo 13, as any invalid plugin configuration
+- Validation also runs on autodeploy: a `.pluginconfig.json` that breaks a rule (callback shared with core, a `Bearer…`
+  secret) stops startup on Valtimo 13, as any invalid plugin configuration
   does; on Valtimo 12 the configuration (and the rest of that file) is skipped and logged. Documented.
 - Valtimo 12: a configuration whose authentication configuration was deleted can't be deleted (core instantiates the
   plugin for the DELETE event, as for the standard plugin). Documented. On v12 the Manual/Automatic callback separation is kept although v12 has no stale cleanup: it keeps the
@@ -330,9 +331,9 @@ instead of Operaton, Valtimo 12 sandbox config, Angular 17 frontend workspace).
 - `backend/app/src/main/resources/config/plugin/notificaties-api-manual.pluginconfig.json`: a `notificatiesapi-manual`
   configuration for the local Open Notificaties (`http://localhost:8002/api/v1/`, reusing the
   `notificatiesapiauthentication` configuration from `_zgw.pluginconfig.json`) with `abonnementRegistration: manual`,
-  `authHeader: local-shared-secret`, `callbackUrl: http://host.docker.internal:8080/api/v1/notificatiesapi-manual/callback/manual`.
+  `authHeader: local-shared-secret`, `callbackUrl: http://host.docker.internal:8080/api/v1/notificatiesapi-manual/callback`.
 - Check: the configuration form shows Manual + the kanalen panel; then
-  `curl -X POST localhost:8080/api/v1/notificatiesapi-manual/callback/manual -H 'Authorization: local-shared-secret' -H 'Content-Type: application/json' -d '{"kanaal":"objecten","hoofdObject":"http://x/1","resource":"object","resourceUrl":"http://x/1","actie":"create","aanmaakdatum":"2026-01-01T00:00:00Z","kenmerken":{}}'`
+  `curl -X POST localhost:8080/api/v1/notificatiesapi-manual/callback -H 'Authorization: local-shared-secret' -H 'Content-Type: application/json' -d '{"kanaal":"objecten","hoofdObject":"http://x/1","resource":"object","resourceUrl":"http://x/1","actie":"create","aanmaakdatum":"2026-01-01T00:00:00Z","kenmerken":{}}'`
   returns 204, a wrong header 401, no header 403.
 
 ## Acceptance criteria
@@ -361,7 +362,7 @@ Both branches unless marked.
    Core never touches this plugin's abonnementen or link rows, as long as the callback URLs differ. Unlike core, a
    changed `authHeader` updates the abonnement; deleting a `receive-notificatie` link removes its filter on the next
    sweep (triggered by the delete of that link).
-5. **Callback** `POST /api/v1/notificatiesapi-manual/callback` and `…/callback/manual`: a header equal to a Manual configuration's secret, or to
+5. **Callback** `POST /api/v1/notificatiesapi-manual/callback`: a header equal to a Manual configuration's secret, or to
    the auth of a non-Manual configuration's link → 204 and queued in core's inbound queue; any other header → 401;
    none → 403; neither of the last two queued (kanaal `test`, Open Notificaties' validation call, gets 204 with any
    header, as core). A blank secret never matches; a link of a configuration that is now

@@ -5,7 +5,7 @@
         "pluginDefinitionKey": "notificatiesapi-manual",
         "properties": {
             "url": "http://localhost:8002/api/v1/",
-            "callbackUrl": "http://host.docker.internal:8080/api/v1/notificatiesapi-manual/callback/manual",
+            "callbackUrl": "http://host.docker.internal:8080/api/v1/notificatiesapi-manual/callback",
             "authenticationPluginConfiguration": "e2116590-1dbe-43b8-ad26-1f5e0398b6e0",
             "abonnementRegistration": "manual",
             "authHeader": "local-shared-secret"

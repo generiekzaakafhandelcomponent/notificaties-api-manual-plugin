@@ -254,6 +254,18 @@ class NotificatiesApiManualPluginAbonnementRegistrarTest {
     }
 
     @Test
+    fun `never deletes the abonnement of a manual configuration with the same URL and callback URL`() {
+        plugins += TestFixtures.plugin()
+        plugins += TestFixtures.plugin(registration = MANUAL, secret = "secret")
+        val manualAbonnement = Abonnement(url = "${ON_URL}abonnement/manual", callbackUrl = CALLBACK_URL, auth = null)
+        whenever(client.getAbonnementen(any(), any())).thenReturn(listOf(manualAbonnement))
+
+        registrar.registerAbonnementen()
+
+        verify(client, never()).deleteAbonnement(any(), any(), any())
+    }
+
+    @Test
     fun `never deletes untracked abonnementen when a core configuration uses the same callback URL`() {
         plugins += TestFixtures.plugin()
         coreConfigurations +=

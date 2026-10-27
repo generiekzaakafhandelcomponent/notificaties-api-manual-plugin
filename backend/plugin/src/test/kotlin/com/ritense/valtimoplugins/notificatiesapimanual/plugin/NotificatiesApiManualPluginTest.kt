@@ -76,24 +76,15 @@ class NotificatiesApiManualPluginTest {
     }
 
     @Test
-    fun `a manual and an automatic configuration of this plugin can't share a callback URL`() {
+    fun `a manual and an automatic configuration of this plugin can share a callback URL`() {
         val automaticConfiguration = TestFixtures.configurationOf(TestFixtures.plugin(callbackUrl = CALLBACK_URL))
         whenever(pluginService.getPluginConfigurations(any())).thenAnswer { invocation ->
             val search = invocation.getArgument<com.ritense.plugin.service.PluginConfigurationSearchParameters>(0)
             if (search.pluginDefinitionKey == "notificatiesapi-manual") listOf(automaticConfiguration) else emptyList()
         }
 
-        assertThrows<ValidationException> { plugin(MANUAL, secret = "secret").validateConfiguration() }
+        assertDoesNotThrow { plugin(MANUAL, secret = "secret").validateConfiguration() }
         assertDoesNotThrow { plugin(AUTOMATIC).validateConfiguration() }
-        assertDoesNotThrow {
-            TestFixtures
-                .plugin(
-                    registration = MANUAL,
-                    secret = "secret",
-                    callbackUrl = "$CALLBACK_URL/manual",
-                    pluginService = pluginService,
-                ).validateConfiguration()
-        }
     }
 
     @Test

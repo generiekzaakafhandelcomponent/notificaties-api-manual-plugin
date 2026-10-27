@@ -95,8 +95,7 @@ A configuration is refused when:
 - the shared secret starts with `Bearer` (in any case), starts or ends with a space, contains characters other than
   printable ASCII, or is longer than 255 characters;
 - the callback URL ends in `/api/v1/notificatiesapi/callback` (the address of the standard plugin), or is the callback
-  URL of a configuration of the standard plugin;
-- a **Manual** and an **Automatic** configuration of this plugin would get the same callback URL.
+  URL of a configuration of the standard plugin.
 
 The form removes spaces around the secret and stops at 255 characters; the other rules are checked when saving.
 
@@ -109,10 +108,10 @@ application from starting.
 
 ## Callback
 
-Valtimo accepts a notificatie on the callback addresses of this plugin (`/api/v1/notificatiesapi-manual/callback` and
-`/api/v1/notificatiesapi-manual/callback/manual`) when it carries the shared secret of a **Manual** configuration, or
-the secret of an abonnement that Valtimo registered for an **Automatic** configuration of this plugin. Other
-notificaties are answered with `401`, or `403` without a secret, and not processed.
+Valtimo accepts a notificatie on the callback address of this plugin (`/api/v1/notificatiesapi-manual/callback`) when
+it carries the shared secret of a **Manual** configuration, or the secret of an abonnement that Valtimo registered for
+an **Automatic** configuration of this plugin. Other notificaties are answered with `401`, or `403` without a secret,
+and not processed.
 
 Accepted notificaties go into the same queue as those of the standard plugin, so all existing consumers receive them. A
 notificatie that arrives through both plugins is processed once; when both deliver it at the same moment, one delivery
@@ -132,6 +131,9 @@ may first be answered with an error. Open Notificaties retries it, and it is the
 - Registration runs in the background after saving. If Open Notificaties can't reach the callback URL, the
   registration fails and the application log says so.
 - One abonnement is registered per Open Notificaties URL. Only the secret of the configuration that holds it is used.
+- Valtimo deletes abonnementen with its callback URL that it didn't register itself, as the standard plugin does. It
+  skips this when a **Manual** configuration uses the same Open Notificaties URL or callback URL, because an
+  administrator's abonnement can't be told apart from a leftover one; remove leftovers in Open Notificaties then.
 - Start one instance of the application first when several start at the same time with a new **Automatic**
   configuration.
 - Process links copied with a BPMN-only redeployment reach the abonnement at the next change or restart.

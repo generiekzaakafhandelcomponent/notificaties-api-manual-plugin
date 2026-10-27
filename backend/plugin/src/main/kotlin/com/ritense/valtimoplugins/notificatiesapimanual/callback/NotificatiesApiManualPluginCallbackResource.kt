@@ -34,9 +34,7 @@ import org.springframework.web.bind.annotation.RestController
 class NotificatiesApiManualPluginCallbackResource(
     private val callbackService: NotificatiesApiManualPluginCallbackService,
 ) {
-    // Two paths, one handler: manual and automatic configurations need different callback URLs (see the plugin's
-    // validation), also when both are reached on the same host.
-    @PostMapping("/v1/notificatiesapi-manual/callback", "/v1/notificatiesapi-manual/callback/manual")
+    @PostMapping("/v1/notificatiesapi-manual/callback")
     fun handleNotification(
         @Valid @RequestBody notification: NotificatiesApiNotificationReceivedEvent,
         @RequestHeader("Authorization", required = false) authHeader: String?,
