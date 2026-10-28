@@ -44,12 +44,14 @@ class NotificatiesApiManualPluginCallbackResource(
         }
         // Open Notificaties sends a test notificatie when it validates a new abonnement.
         if (notification.kanaal == "test") {
+            callbackService.clearMisroutedCallbacks(authHeader)
             return ResponseEntity.noContent().build()
         }
         if (!callbackService.isAuthorizedCallback(authHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
         callbackService.registerNotification(notification)
+        callbackService.clearMisroutedCallbacks(authHeader)
         return ResponseEntity.noContent().build()
     }
 }

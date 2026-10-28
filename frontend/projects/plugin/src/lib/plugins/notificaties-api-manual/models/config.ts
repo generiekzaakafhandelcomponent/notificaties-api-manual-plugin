@@ -20,7 +20,7 @@ type NotificatiesApiManualPluginAbonnementRegistration = 'automatic' | 'manual';
 
 interface NotificatiesApiManualPluginConfig extends PluginConfigurationData {
   url: string;
-  callbackUrl: string;
+  callbackUrl?: string | null;
   authHeader: string;
   abonnementRegistration?: NotificatiesApiManualPluginAbonnementRegistration;
 }

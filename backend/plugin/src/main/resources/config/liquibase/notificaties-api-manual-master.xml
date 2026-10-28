@@ -24,5 +24,6 @@
     <property name="uuidType" value="uuid" dbms="h2,postgresql"/>
 
     <include file="changelog/20261026-add-notificaties-api-manual-abonnement-link-table.xml" relativeToChangelogFile="true"/>
+    <include file="changelog/20261028-add-notificaties-api-manual-misrouted-callback-table.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

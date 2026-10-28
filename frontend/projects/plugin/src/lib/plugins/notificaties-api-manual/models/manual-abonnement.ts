@@ -20,8 +20,10 @@ interface NotificatiesApiManualPluginKanaal {
 }
 
 interface NotificatiesApiManualPluginManualAbonnement {
-  callbackUrl: string;
+  callbackUrl: string | null;
   kanalen: Array<NotificatiesApiManualPluginKanaal>;
+  /** When a notificatie for this configuration last arrived on the standard plugin's callback address (ISO-8601). */
+  misroutedCallbackAt?: string | null;
 }
 
 export {NotificatiesApiManualPluginKanaal, NotificatiesApiManualPluginManualAbonnement};

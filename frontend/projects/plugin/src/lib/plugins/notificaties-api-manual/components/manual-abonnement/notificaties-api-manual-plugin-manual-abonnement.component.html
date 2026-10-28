@@ -16,6 +16,23 @@
 
 <div [attr.data-test-id]="testIds.panel" class="manual-abonnement">
   <ng-container *ngIf="manualAbonnement; else saveFirst">
+    <cds-inline-notification
+      *ngIf="manualAbonnement.misroutedCallbackAt"
+      [attr.data-test-id]="testIds.misroutedCallback"
+      [notificationObj]="{
+        type: 'warning',
+        title: ('manualAbonnementMisroutedTitle' | pluginTranslate: pluginId | async),
+        message:
+          ('manualAbonnementMisrouted' | pluginTranslate: pluginId | async) +
+          ' ' +
+          ('manualAbonnementMisroutedAt' | pluginTranslate: pluginId | async) +
+          ' ' +
+          (manualAbonnement.misroutedCallbackAt | date: 'medium'),
+        showClose: false,
+        lowContrast: true,
+      }"
+    ></cds-inline-notification>
+
     <v-paragraph [margin]="true">
       {{ 'manualAbonnementDescription' | pluginTranslate: pluginId | async }}
     </v-paragraph>
@@ -25,8 +42,18 @@
         {{ 'callbackUrl' | pluginTranslate: pluginId | async }}
       </dt>
 
-      <dd [attr.data-test-id]="testIds.callbackUrl">
+      <dd *ngIf="manualAbonnement.callbackUrl; else callbackUrlHint" [attr.data-test-id]="testIds.callbackUrl">
         {{ manualAbonnement.callbackUrl }}
+      </dd>
+
+      <ng-template #callbackUrlHint>
+        <dd [attr.data-test-id]="testIds.callbackUrlHint">
+          {{ 'manualAbonnementCallbackUrlHint' | pluginTranslate: pluginId | async }}
+        </dd>
+      </ng-template>
+
+      <dd [attr.data-test-id]="testIds.callbackUrlWarning">
+        <em>{{ 'manualAbonnementCallbackUrlWarning' | pluginTranslate: pluginId | async }}</em>
       </dd>
 
       <ng-container *ngFor="let kanaal of manualAbonnement.kanalen">

@@ -135,6 +135,36 @@ describe('NotificatiesApiManualPluginConfigurationComponent', () => {
     expect(emittedConfigurations).toEqual([manualConfiguration]);
   });
 
+  it('should save a manual configuration without a callback URL as having none', () => {
+    const manualConfiguration = {
+      ...CONFIGURATION_WITH_AUTHENTICATION,
+      callbackUrl: '',
+      abonnementRegistration: 'manual',
+      authHeader: 'shared-secret',
+    } as NotificatiesApiManualPluginConfig;
+    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
+    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
+
+    component.formValueChange(manualConfiguration);
+    save$.next();
+
+    expect(emittedConfigurations).toEqual([{...manualConfiguration, callbackUrl: null}]);
+  });
+
+  it('should not save an automatic configuration without a callback URL', () => {
+    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
+    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
+
+    component.formValueChange({
+      ...CONFIGURATION_WITH_AUTHENTICATION,
+      callbackUrl: '',
+      abonnementRegistration: 'automatic',
+    });
+    save$.next();
+
+    expect(emittedConfigurations).toEqual([]);
+  });
+
   it('should save an automatic configuration without a shared secret', () => {
     const automaticConfiguration = {
       ...CONFIGURATION_WITH_AUTHENTICATION,
@@ -284,6 +314,7 @@ describe('NotificatiesApiManualPluginConfigurationComponent template', () => {
 
     expect(authHeader.required).toBeFalse();
     expect(authHeader.title).toBe('authHeader');
+    expect(element('v-input[name="callbackUrl"]').required).toBeTrue();
     expect(element('valtimo-notificaties-api-manual-plugin-manual-abonnement')).toBeNull();
   });
 
@@ -295,6 +326,7 @@ describe('NotificatiesApiManualPluginConfigurationComponent template', () => {
     const panel = element('valtimo-notificaties-api-manual-plugin-manual-abonnement');
     expect(authHeader.required).toBeTrue();
     expect(authHeader.title).toBe('sharedSecret');
+    expect(element('v-input[name="callbackUrl"]').required).toBeFalse();
     expect(panel).not.toBeNull();
     expect(panel.manualAbonnement).toEqual({
       callbackUrl: 'https://gateway.example.com/callback',

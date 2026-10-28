@@ -48,19 +48,6 @@
     placeholder="https://opennotificaties.example.com/api/v1/"
   >
   </v-input>
-  <v-input
-    name="callbackUrl"
-    [attr.data-test-id]="testIds.callbackUrl"
-    [title]="'callbackUrl' | pluginTranslate: pluginId | async"
-    [margin]="true"
-    [disabled]="obs.disabled"
-    [defaultValue]="obs.prefill?.callbackUrl"
-    [required]="true"
-    [trim]="true"
-    [tooltip]="'callbackUrlTooltip' | pluginTranslate: pluginId | async"
-    placeholder="https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback"
-  >
-  </v-input>
   <ng-container
     *ngIf="{registrationSelectItems: abonnementRegistrationSelectItems$ | async} as registrationObs"
   >
@@ -78,6 +65,21 @@
       name="abonnementRegistration"
     ></v-select>
   </ng-container>
+  <v-input
+    name="callbackUrl"
+    [attr.data-test-id]="testIds.callbackUrl"
+    [title]="'callbackUrl' | pluginTranslate: pluginId | async"
+    [margin]="true"
+    [disabled]="obs.disabled"
+    [defaultValue]="obs.prefill?.callbackUrl"
+    [required]="!obs.manual"
+    [trim]="true"
+    [tooltip]="
+      (obs.manual ? 'callbackUrlManualTooltip' : 'callbackUrlTooltip') | pluginTranslate: pluginId | async
+    "
+    placeholder="https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback"
+  >
+  </v-input>
 
   <v-input
     name="authHeader"

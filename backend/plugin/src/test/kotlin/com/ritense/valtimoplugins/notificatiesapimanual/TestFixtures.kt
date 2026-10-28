@@ -48,12 +48,12 @@ object TestFixtures {
         registration: AbonnementRegistration = AbonnementRegistration.AUTOMATIC,
         secret: String? = null,
         url: String = ON_URL,
-        callbackUrl: String = CALLBACK_URL,
+        callbackUrl: String? = CALLBACK_URL,
         client: NotificatiesApiClient = mock(),
         pluginService: PluginService = mock(),
     ) = NotificatiesApiManualPlugin(PluginConfigurationId.existingId(id), client, pluginService).apply {
         this.url = URI(url)
-        this.callbackUrl = URI(callbackUrl)
+        this.callbackUrl = callbackUrl?.let { URI(it) }
         this.authHeader = secret
         this.abonnementRegistration = registration
         this.authenticationPluginConfiguration = authentication
@@ -79,7 +79,7 @@ object TestFixtures {
             NotificatiesApiManualPlugin.PLUGIN_KEY,
             mapOf(
                 "url" to plugin.url.toString(),
-                "callbackUrl" to plugin.callbackUrl.toString(),
+                "callbackUrl" to plugin.callbackUrl?.toString(),
                 "authHeader" to plugin.authHeader,
                 "abonnementRegistration" to plugin.abonnementRegistration.value,
             ),

@@ -62,6 +62,22 @@ class NotificatiesApiManualPluginTest {
     }
 
     @Test
+    fun `manual registration does not require a callback URL`() {
+        assertDoesNotThrow {
+            TestFixtures
+                .plugin(registration = MANUAL, secret = "secret", callbackUrl = null, pluginService = pluginService)
+                .validateConfiguration()
+        }
+    }
+
+    @Test
+    fun `automatic registration requires a callback URL`() {
+        assertThrows<ValidationException> {
+            TestFixtures.plugin(callbackUrl = null, pluginService = pluginService).validateConfiguration()
+        }
+    }
+
+    @Test
     fun `a shared secret starting with Bearer is rejected because the security filter takes it as a token`() {
         assertThrows<ValidationException> { plugin(MANUAL, secret = "Bearer abc").validateConfiguration() }
         assertThrows<ValidationException> { plugin(AUTOMATIC, secret = "Bearer abc").validateConfiguration() }

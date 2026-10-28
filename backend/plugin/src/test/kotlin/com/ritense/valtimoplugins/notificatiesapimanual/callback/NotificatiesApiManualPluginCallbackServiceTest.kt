@@ -16,23 +16,32 @@
 
 package com.ritense.valtimoplugins.notificatiesapimanual.callback
 
+import com.ritense.notificatiesapi.domain.NotificatiesApiAbonnementLink
+import com.ritense.notificatiesapi.domain.NotificatiesApiConfigurationId
 import com.ritense.notificatiesapi.event.NotificatiesApiNotificationReceivedEvent
+import com.ritense.notificatiesapi.exception.AuthorizationException
 import com.ritense.notificatiesapi.service.NotificatiesApiService
 import com.ritense.plugin.domain.PluginConfiguration
+import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.AbonnementRegistration.MANUAL
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginAbonnementLink
 import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginConfigurationId
+import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginMisroutedCallback
 import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginAbonnementLinkRepository
+import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
+import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -42,17 +51,54 @@ class NotificatiesApiManualPluginCallbackServiceTest {
     private lateinit var pluginService: PluginService
     private lateinit var linkRepository: NotificatiesApiManualPluginAbonnementLinkRepository
     private lateinit var notificatiesApiService: NotificatiesApiService
+    private lateinit var misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository
     private lateinit var service: NotificatiesApiManualPluginCallbackService
     private val configurations = mutableListOf<PluginConfiguration>()
+    private val coreConfigurations = mutableListOf<PluginConfiguration>()
     private val links = mutableListOf<NotificatiesApiManualPluginAbonnementLink>()
+    private val misroutedCallbacks = mutableMapOf<UUID, Instant>()
 
     @BeforeEach
     fun setUp() {
         pluginService = mock()
         linkRepository = mock()
         notificatiesApiService = mock()
-        service = NotificatiesApiManualPluginCallbackService(pluginService, linkRepository, notificatiesApiService)
-        whenever(pluginService.getPluginConfigurations(any())).thenAnswer { configurations.toList() }
+        misroutedCallbackRepository = mock()
+        service =
+            NotificatiesApiManualPluginCallbackService(
+                pluginService,
+                linkRepository,
+                notificatiesApiService,
+                misroutedCallbackRepository,
+            )
+        whenever(pluginService.getPluginConfigurations(any())).thenAnswer { invocation ->
+            val search = invocation.getArgument<PluginConfigurationSearchParameters>(0)
+            if (search.pluginDefinitionKey ==
+                "notificatiesapi"
+            ) {
+                coreConfigurations.toList()
+            } else {
+                configurations.toList()
+            }
+        }
+        whenever(notificatiesApiService.findAbonnementSubscription(any())).thenThrow(AuthorizationException())
+        whenever(misroutedCallbackRepository.save(any<NotificatiesApiManualPluginMisroutedCallback>())).thenAnswer {
+            val record = it.getArgument<NotificatiesApiManualPluginMisroutedCallback>(0)
+            misroutedCallbacks[record.configurationId.id] = record.lastReceivedAt
+            record
+        }
+        whenever(misroutedCallbackRepository.count()).thenAnswer { misroutedCallbacks.size.toLong() }
+        whenever(misroutedCallbackRepository.findAll()).thenAnswer {
+            misroutedCallbacks.map { (id, at) ->
+                NotificatiesApiManualPluginMisroutedCallback(NotificatiesApiManualPluginConfigurationId(id), at)
+            }
+        }
+        whenever(misroutedCallbackRepository.deleteAll(any<Iterable<NotificatiesApiManualPluginMisroutedCallback>>()))
+            .thenAnswer {
+                it.getArgument<Iterable<NotificatiesApiManualPluginMisroutedCallback>>(0).forEach { record ->
+                    misroutedCallbacks.remove(record.configurationId.id)
+                }
+            }
         whenever(linkRepository.findAllByAuth(any())).thenAnswer { invocation ->
             links.filter { it.auth == invocation.getArgument<String>(0) }
         }
@@ -143,6 +189,99 @@ class NotificatiesApiManualPluginCallbackServiceTest {
         )
         verify(notificatiesApiService, never()).registerNotification(any())
     }
+
+    @Test
+    fun `records the shared secret of a manual configuration on core's address`() {
+        val manual = manualConfiguration("manual-secret")
+        manualConfiguration("other-secret")
+
+        service.recordIfMisrouted("manual-secret")
+
+        assertEquals(setOf(manual.configurationId.id), misroutedCallbacks.keys)
+    }
+
+    @Test
+    fun `does not record secrets of other configurations, unknown secrets or secrets core accepts`() {
+        val automatic = TestFixtures.plugin().also { configurations += TestFixtures.configurationOf(it) }
+        links += link(automatic.configurationId.id, "generated-key")
+        manualConfiguration("registered-by-core")
+        manualConfiguration("of-a-core-configuration")
+        doReturn(
+            NotificatiesApiAbonnementLink(
+                NotificatiesApiConfigurationId(UUID.randomUUID()),
+                "url",
+                "registered-by-core",
+            ),
+        ).whenever(notificatiesApiService).findAbonnementSubscription("registered-by-core")
+        coreConfigurations +=
+            TestFixtures.pluginConfiguration(
+                UUID.randomUUID(),
+                "notificatiesapi",
+                mapOf("authHeader" to "of-a-core-configuration"),
+            )
+
+        listOf("generated-key", "unknown", "", "registered-by-core", "of-a-core-configuration").forEach {
+            service.recordIfMisrouted(it)
+        }
+
+        assertTrue(misroutedCallbacks.isEmpty())
+    }
+
+    @Test
+    fun `recording never fails the callback`() {
+        manualConfiguration("manual-secret")
+        whenever(misroutedCallbackRepository.save(any<NotificatiesApiManualPluginMisroutedCallback>()))
+            .thenThrow(DataIntegrityViolationException("duplicate"))
+        service.recordIfMisrouted("manual-secret")
+
+        whenever(pluginService.getPluginConfigurations(any())).thenThrow(IllegalStateException("database down"))
+        misroutedCallbacks[UUID.randomUUID()] = Instant.now()
+        service.recordIfMisrouted("manual-secret")
+        service.clearMisroutedCallbacks("manual-secret")
+    }
+
+    @Test
+    fun `a callback on this plugin's address clears the records of its secret and of gone configurations`() {
+        val reached = manualConfiguration("reached")
+        val stillMisrouted = manualConfiguration("still-misrouted")
+        val nowAutomatic = TestFixtures.plugin().also { configurations += TestFixtures.configurationOf(it) }
+        val deleted = UUID.randomUUID()
+        listOf(reached.configurationId.id, stillMisrouted.configurationId.id, nowAutomatic.configurationId.id, deleted)
+            .forEach { misroutedCallbacks[it] = Instant.now() }
+
+        service.clearMisroutedCallbacks("reached")
+
+        assertEquals(setOf(stillMisrouted.configurationId.id), misroutedCallbacks.keys)
+    }
+
+    @Test
+    fun `clearing without records reads nothing else`() {
+        service.clearMisroutedCallbacks("anything")
+
+        verify(pluginService, never()).getPluginConfigurations(any())
+    }
+
+    @Test
+    fun `the resource clears the records after an accepted notificatie and after the test notificatie`() {
+        val manual = manualConfiguration("manual-secret")
+        val resource = NotificatiesApiManualPluginCallbackResource(service)
+
+        misroutedCallbacks[manual.configurationId.id] = Instant.now()
+        resource.handleNotification(notificatie(), "wrong")
+        assertEquals(setOf(manual.configurationId.id), misroutedCallbacks.keys)
+
+        resource.handleNotification(notificatie(), "manual-secret")
+        assertTrue(misroutedCallbacks.isEmpty())
+
+        misroutedCallbacks[manual.configurationId.id] = Instant.now()
+        resource.handleNotification(notificatie(kanaal = "test"), "manual-secret")
+        assertTrue(misroutedCallbacks.isEmpty())
+    }
+
+    private fun manualConfiguration(secret: String) =
+        TestFixtures.plugin(registration = MANUAL, secret = secret).also {
+            configurations += TestFixtures.configurationOf(it)
+        }
 
     private fun link(
         configurationId: UUID,

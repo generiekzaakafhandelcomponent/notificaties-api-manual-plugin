@@ -61,7 +61,10 @@ class NotificatiesApiManualPluginBeanNamesTest {
                     .toList()
                     .ifEmpty { listOf(method.name) }
             } +
-            "notificatiesApiManualPluginAbonnementLinkRepository"
+            listOf(
+                "notificatiesApiManualPluginAbonnementLinkRepository",
+                "notificatiesApiManualPluginMisroutedCallbackRepository",
+            )
 
     @Test
     fun `every bean name has the plugin prefix`() {

@@ -23,17 +23,21 @@ import com.ritense.plugin.annotation.PluginCategory
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
+import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginConfigurationId
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.CORE_PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.PLUGIN_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.RECEIVE_NOTIFICATIE_ACTION_KEY
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.normalize
 import com.ritense.valtimoplugins.notificatiesapimanual.registration.NotificatiesApiManualPluginKanaalFilters
+import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.time.Instant
 import java.util.UUID
 
 /**
- * What the abonnement of a manual configuration must contain: its callback URL, and the kanalen with filters of
+ * What the abonnement of a manual configuration must contain: its callback URL (when entered), and the kanalen with
+ * filters of
  * - this configuration's `receive-notificatie` process links,
  * - core `receive-notificatie` links of core Notificaties API configurations on the same Open Notificaties URL, and
  * - other core Notificaties API listeners (Verzoek, Portaaltaak, external plugins) on the same URL.
@@ -44,6 +48,7 @@ import java.util.UUID
 class NotificatiesApiManualPluginManualAbonnementService(
     private val pluginService: PluginService,
     private val pluginProcessLinkRepository: PluginProcessLinkRepository,
+    private val misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository,
 ) {
     fun getManualAbonnement(configurationId: UUID): ManualAbonnement? {
         val configuration =
@@ -58,8 +63,13 @@ class NotificatiesApiManualPluginManualAbonnementService(
         val ownKanalen = receiveKanalen(PLUGIN_KEY, setOf(configurationId))
 
         return ManualAbonnement(
-            callbackUrl = plugin.callbackUrl.toASCIIString(),
+            callbackUrl = plugin.callbackUrl?.toASCIIString(),
             kanalen = (ownKanalen + coreKanalen(url)).distinct(),
+            misroutedCallbackAt =
+                misroutedCallbackRepository
+                    .findById(NotificatiesApiManualPluginConfigurationId(configurationId))
+                    .orElse(null)
+                    ?.lastReceivedAt,
         )
     }
 
@@ -121,8 +131,13 @@ class NotificatiesApiManualPluginManualAbonnementService(
         )
 
     data class ManualAbonnement(
-        val callbackUrl: String,
+        val callbackUrl: String?,
         val kanalen: List<Abonnement.Kanaal>,
+        /**
+         * When a notificatie with this configuration's secret last arrived on core's callback address, unless one has
+         * arrived on this plugin's address since.
+         */
+        val misroutedCallbackAt: Instant? = null,
     )
 
     companion object {

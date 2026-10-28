@@ -409,6 +409,11 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                 "Not deleting untracked abonnementen in Open Notificaties, because a configuration of this plugin on " +
                     "the same URL registers its abonnement manually"
             }
+        } else if (kanaalFilters.hasManualConfigurationWithoutCallbackUrl()) {
+            logger.info {
+                "Not deleting untracked abonnementen in Open Notificaties, because a configuration of this plugin " +
+                    "registers its abonnement manually without a callback URL"
+            }
         } else {
             deleteStaleAbonnementen(plugin, abonnementenInApi, knownLinks, protectedCallbackUrls)
         }
@@ -420,7 +425,7 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
                 ?: createRandomKey()
         val desired =
             Abonnement(
-                callbackUrl = plugin.callbackUrl.toASCIIString(),
+                callbackUrl = plugin.requireCallbackUrl().toASCIIString(),
                 auth = authKey,
                 kanalen = kanaalFilters.automaticKanaalFilters(group),
             )
@@ -473,7 +478,7 @@ class NotificatiesApiManualPluginAbonnementRegistrar(
         knownLinks: List<NotificatiesApiManualPluginAbonnementLink>,
         protectedCallbackUrls: Set<String>,
     ) {
-        val callbackUrl = plugin.callbackUrl.toString()
+        val callbackUrl = plugin.requireCallbackUrl().toString()
         if (normalize(callbackUrl) in protectedCallbackUrls) {
             logger.info {
                 "Not deleting untracked abonnementen in Open Notificaties: callback URL '$callbackUrl' is also " +

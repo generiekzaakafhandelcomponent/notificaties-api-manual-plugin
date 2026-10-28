@@ -27,6 +27,7 @@ import com.ritense.plugin.service.PluginService
 import com.ritense.valtimo.contract.authentication.AuthoritiesConstants.ADMIN
 import com.ritense.valtimo.contract.authentication.AuthoritiesConstants.USER
 import com.ritense.valtimo.contract.json.MapperSingleton
+import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -63,6 +64,9 @@ class CallbackIT : BaseIntegrationTest() {
     lateinit var coreLinkRepository: NotificatiesApiAbonnementLinkRepository
 
     @Autowired
+    lateinit var misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository
+
+    @Autowired
     lateinit var transactionTemplate: TransactionTemplate
 
     @Autowired
@@ -76,6 +80,7 @@ class CallbackIT : BaseIntegrationTest() {
         transactionTemplate.executeWithoutResult {
             inboundEventRepository.deleteAll()
             coreLinkRepository.deleteAll()
+            misroutedCallbackRepository.deleteAll()
         }
         receivedEvents.events.clear()
         val authentication =
@@ -131,7 +136,7 @@ class CallbackIT : BaseIntegrationTest() {
             )
         }
 
-        mockMvc.perform(callback("core-key", path = "/api/v1/notificatiesapi/callback")).andExpect(status().isNoContent)
+        mockMvc.perform(callback("core-key", path = CORE_CALLBACK_PATH)).andExpect(status().isNoContent)
         mockMvc.perform(callback(SHARED_SECRET)).andExpect(status().isNoContent)
 
         assertEquals(1, inboundEventRepository.count())
@@ -148,6 +153,54 @@ class CallbackIT : BaseIntegrationTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.callbackUrl").value(MANUAL_CALLBACK_URL))
             .andExpect(jsonPath("$.kanalen.length()").value(0))
+    }
+
+    @Test
+    @WithMockUser(authorities = [ADMIN])
+    fun `warns an admin about notificaties for a manual configuration on core's address until one arrives here`() {
+        mockMvc
+            .perform(get(MANUAL_VIEW_PATH, manual.id.id))
+            .andExpect(jsonPath("$.misroutedCallbackAt").doesNotExist())
+
+        mockMvc.perform(callback(SHARED_SECRET, path = CORE_CALLBACK_PATH)).andExpect(status().isUnauthorized)
+
+        assertEquals(0, inboundEventRepository.count())
+        mockMvc
+            .perform(get(MANUAL_VIEW_PATH, manual.id.id))
+            .andExpect(jsonPath("$.misroutedCallbackAt").isString)
+
+        mockMvc.perform(callback(SHARED_SECRET)).andExpect(status().isNoContent)
+
+        mockMvc
+            .perform(get(MANUAL_VIEW_PATH, manual.id.id))
+            .andExpect(jsonPath("$.misroutedCallbackAt").doesNotExist())
+    }
+
+    @Test
+    fun `notices the test notificatie on core's address, which core still answers`() {
+        mockMvc
+            .perform(callback(SHARED_SECRET, path = CORE_CALLBACK_PATH, kanaal = "test"))
+            .andExpect(status().isNoContent)
+
+        assertEquals(1, misroutedCallbackRepository.count())
+    }
+
+    @Test
+    fun `does not notice core's own notificaties on core's address`() {
+        transactionTemplate.executeWithoutResult {
+            coreLinkRepository.save(
+                NotificatiesApiAbonnementLink(
+                    NotificatiesApiConfigurationId(UUID.randomUUID()),
+                    "http://localhost:8002/api/v1/abonnement/core",
+                    SHARED_SECRET,
+                ),
+            )
+        }
+
+        mockMvc.perform(callback(SHARED_SECRET, path = CORE_CALLBACK_PATH)).andExpect(status().isNoContent)
+        mockMvc.perform(callback("not-a-secret", path = CORE_CALLBACK_PATH)).andExpect(status().isUnauthorized)
+
+        assertEquals(0, misroutedCallbackRepository.count())
     }
 
     @Test
@@ -181,12 +234,13 @@ class CallbackIT : BaseIntegrationTest() {
     private fun callback(
         authorization: String?,
         path: String = "/api/v1/notificatiesapi-manual/callback",
+        kanaal: String = "objecten",
     ) = post(path)
         .contentType(MediaType.APPLICATION_JSON)
         .content(
             """
             {
-                "kanaal": "objecten",
+                "kanaal": "$kanaal",
                 "hoofdObject": "http://localhost:8010/api/v2/objects/1",
                 "resource": "object",
                 "resourceUrl": "http://localhost:8010/api/v2/objects/1",
@@ -210,6 +264,7 @@ class CallbackIT : BaseIntegrationTest() {
 
     companion object {
         const val SHARED_SECRET = "a-shared-secret"
+        const val CORE_CALLBACK_PATH = "/api/v1/notificatiesapi/callback"
         const val MANUAL_CALLBACK_URL =
             "https://gateway.example.com/valtimo/api/v1/notificatiesapi-manual/callback"
         const val MANUAL_VIEW_PATH = "/api/management/v1/notificatiesapi-manual/configurations/{id}/manual-abonnement"

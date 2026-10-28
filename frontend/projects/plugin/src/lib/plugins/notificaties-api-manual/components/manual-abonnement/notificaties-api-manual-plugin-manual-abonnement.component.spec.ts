@@ -72,6 +72,43 @@ describe('NotificatiesApiManualPluginManualAbonnementComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('manualAbonnementSaveFirst');
   });
 
+  it('should show where the callback URL points when the configuration has none', () => {
+    fixture.componentInstance.manualAbonnement = {callbackUrl: null, kanalen: []};
+    fixture.detectChanges();
+
+    expect(byTestId(testIds.callbackUrl).length).toBe(0);
+    expect(byTestId(testIds.callbackUrlHint)[0].textContent.trim()).toBe(
+      'manualAbonnementCallbackUrlHint'
+    );
+  });
+
+  it('should always warn against the callback address of the standard plugin', () => {
+    fixture.componentInstance.manualAbonnement = {callbackUrl: null, kanalen: []};
+    fixture.detectChanges();
+
+    expect(byTestId(testIds.callbackUrlWarning)[0].textContent.trim()).toBe(
+      'manualAbonnementCallbackUrlWarning'
+    );
+    expect(byTestId(testIds.misroutedCallback).length).toBe(0);
+  });
+
+  it('should warn when notificaties for this configuration arrived on the standard plugin', () => {
+    fixture.componentInstance.manualAbonnement = {
+      callbackUrl: null,
+      kanalen: [],
+      misroutedCallbackAt: '2026-10-28T09:15:00Z',
+    };
+    fixture.detectChanges();
+
+    const notification = byTestId(testIds.misroutedCallback)[0] as HTMLElement & {
+      notificationObj: {type: string; title: string; message: string};
+    };
+    expect(notification.notificationObj.type).toBe('warning');
+    expect(notification.notificationObj.title).toBe('manualAbonnementMisroutedTitle');
+    expect(notification.notificationObj.message).toContain('manualAbonnementMisrouted manualAbonnementMisroutedAt');
+    expect(notification.notificationObj.message).toContain('2026');
+  });
+
   it('should ask to save the configuration first when no kanalen are known', () => {
     fixture.componentInstance.manualAbonnement = null;
     fixture.detectChanges();

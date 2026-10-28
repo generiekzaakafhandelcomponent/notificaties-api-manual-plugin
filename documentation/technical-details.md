@@ -3,8 +3,9 @@
 This page is meant for developers and operators. For configuring the plugin in the user interface, see
 [Notificaties API (manual abonnement)](plugin.md).
 
-The plugin has its own plugin key (`notificatiesapi-manual`), callback addresses and database table. Installing it
-changes nothing for the standard Notificaties API plugin.
+The plugin has its own plugin key (`notificatiesapi-manual`), callback addresses and database tables. Installing it
+changes nothing for the standard Notificaties API plugin: it only reads the `Authorization` header of notificaties on
+the address of the standard plugin, to [warn about misrouted notificaties](#callback).
 
 ---
 
@@ -14,7 +15,7 @@ changes nothing for the standard Notificaties API plugin.
 
 ```kotlin
 dependencies {
-    implementation("com.ritense.valtimoplugins:notificaties-api-manual:1.0.0")
+    implementation("com.ritense.valtimoplugins:notificaties-api-manual:1.0.1")
 }
 ```
 
@@ -23,7 +24,7 @@ dependencies {
 ```json
 {
   "dependencies": {
-    "@valtimo-plugins/notificaties-api-manual": "1.0.0"
+    "@valtimo-plugins/notificaties-api-manual": "1.0.1"
   }
 }
 ```
@@ -52,7 +53,8 @@ import {
 })
 ```
 
-The plugin creates its own table (`notificaties_api_manual_abonnement_link`) when the application starts.
+The plugin creates its own tables (`notificaties_api_manual_abonnement_link` and
+`notificaties_api_manual_misrouted_callback`) when the application starts.
 
 ---
 
@@ -94,6 +96,7 @@ A configuration is refused when:
 
 - the shared secret starts with `Bearer` (in any case), starts or ends with a space, contains characters other than
   printable ASCII, or is longer than 255 characters;
+- an **Automatic** configuration has no callback URL;
 - the callback URL ends in `/api/v1/notificatiesapi/callback` (the address of the standard plugin), or is the callback
   URL of a configuration of the standard plugin.
 
@@ -112,6 +115,14 @@ Valtimo accepts a notificatie on the callback address of this plugin (`/api/v1/n
 it carries the shared secret of a **Manual** configuration, or the secret of an abonnement that Valtimo registered for
 an **Automatic** configuration of this plugin. Other notificaties are answered with `401`, or `403` without a secret,
 and not processed.
+
+Valtimo also looks at the `Authorization` header of every notificatie on the address of the standard plugin
+(`/api/v1/notificatiesapi/callback`). When it is the shared secret of a **Manual** configuration and not a secret of
+the standard plugin, Valtimo logs a warning and stores the time per configuration in the table
+`notificaties_api_manual_misrouted_callback`. The form of that configuration then shows a warning. The standard plugin
+still answers the notificatie itself (`401`, or `204` for the test notificatie). The stored time is removed when a
+notificatie with that secret arrives on the address of this plugin. Times of configurations that were deleted or are no
+longer **Manual** are removed with the next notificatie that this plugin accepts.
 
 Accepted notificaties go into the same queue as those of the standard plugin, so all existing consumers receive them. A
 notificatie that arrives through both plugins is processed once; when both deliver it at the same moment, one delivery
@@ -132,8 +143,9 @@ may first be answered with an error. Open Notificaties retries it, and it is the
   registration fails and the application log says so.
 - One abonnement is registered per Open Notificaties URL. Only the secret of the configuration that holds it is used.
 - Valtimo deletes abonnementen with its callback URL that it didn't register itself, as the standard plugin does. It
-  skips this when a **Manual** configuration uses the same Open Notificaties URL or callback URL, because an
-  administrator's abonnement can't be told apart from a leftover one; remove leftovers in Open Notificaties then.
+  skips this when a **Manual** configuration uses the same Open Notificaties URL or callback URL, or has no callback
+  URL, because an administrator's abonnement can't be told apart from a leftover one; remove leftovers in Open
+  Notificaties then.
 - Start one instance of the application first when several start at the same time with a new **Automatic**
   configuration.
 - Process links copied with a BPMN-only redeployment reach the abonnement at the next change or restart.

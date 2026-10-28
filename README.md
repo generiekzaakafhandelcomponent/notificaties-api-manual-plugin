@@ -8,7 +8,7 @@ changes nothing for the standard plugin.
 
 | Branch | Valtimo | Version |
 |--------|---------|---------|
-| `main` | 13.41.0 and later 13.x | `1.0.0` |
+| `main` | 13.41.0 and later 13.x | `1.0.1` |
 | `v12`  | 12.45.0 and later 12.x | `1.0.0-V12` |
 
 From Valtimo 13.52.0 the standard Notificaties API plugin has manual abonnement registration itself; move to it when

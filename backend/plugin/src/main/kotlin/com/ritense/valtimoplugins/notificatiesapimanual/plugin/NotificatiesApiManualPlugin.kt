@@ -65,9 +65,10 @@ class NotificatiesApiManualPlugin(
     @PluginProperty(key = "url", secret = false)
     lateinit var url: URI
 
+    /** Required for automatic registration; with manual registration the administrator enters it in Open Notificaties. */
     @Url
-    @PluginProperty(key = "callbackUrl", secret = false)
-    lateinit var callbackUrl: URI
+    @PluginProperty(key = CALLBACK_URL_PROPERTY, secret = false, required = false)
+    var callbackUrl: URI? = null
 
     @PluginProperty(key = AUTH_HEADER_PROPERTY, secret = false, required = false)
     var authHeader: String? = null
@@ -79,6 +80,10 @@ class NotificatiesApiManualPlugin(
     var abonnementRegistration: AbonnementRegistration = AbonnementRegistration.AUTOMATIC
 
     fun isManualAbonnementRegistration() = abonnementRegistration == AbonnementRegistration.MANUAL
+
+    /** The callback URL of an automatic configuration, which validation requires. */
+    fun requireCallbackUrl(): URI =
+        checkNotNull(callbackUrl) { "Plugin configuration '${configurationId.id}' has no callback URL" }
 
     @PluginEvent(invokedOn = [EventType.CREATE, EventType.UPDATE])
     fun validateConfiguration() {
@@ -106,7 +111,12 @@ class NotificatiesApiManualPlugin(
                 "A shared secret (authHeader) is required when the abonnement is registered manually",
             )
         }
-        val callback = normalize(callbackUrl)
+        val callback =
+            callbackUrl?.let { normalize(it) } ?: if (isManualAbonnementRegistration()) {
+                return
+            } else {
+                throw ValidationException("A callback URL is required when the abonnement is registered automatically")
+            }
         // Core's endpoint only accepts core's own keys, so every notificatie would get 401 there.
         if (callback.endsWith(CORE_CALLBACK_PATH)) {
             throw ValidationException(

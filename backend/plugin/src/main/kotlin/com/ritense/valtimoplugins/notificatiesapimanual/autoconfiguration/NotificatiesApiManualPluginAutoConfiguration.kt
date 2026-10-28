@@ -29,13 +29,16 @@ import com.ritense.valtimo.contract.config.LiquibaseMasterChangeLogLocation
 import com.ritense.valtimo.service.ProcessPropertyService
 import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginCallbackResource
 import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginCallbackService
+import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginMisroutedCallbackFilter
 import com.ritense.valtimoplugins.notificatiesapimanual.config.NotificatiesApiManualPluginProperties
 import com.ritense.valtimoplugins.notificatiesapimanual.listener.NotificatiesApiManualPluginProcessLinkListener
 import com.ritense.valtimoplugins.notificatiesapimanual.manual.NotificatiesApiManualPluginManualAbonnementResource
 import com.ritense.valtimoplugins.notificatiesapimanual.manual.NotificatiesApiManualPluginManualAbonnementService
+import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.CORE_CALLBACK_PATH
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPluginFactory
 import com.ritense.valtimoplugins.notificatiesapimanual.registration.NotificatiesApiManualPluginAbonnementRegistrar
 import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginAbonnementLinkRepository
+import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
 import com.ritense.valtimoplugins.notificatiesapimanual.security.NotificatiesApiManualPluginHttpSecurityConfigurer
 import org.operaton.bpm.engine.RepositoryService
 import org.operaton.bpm.engine.RuntimeService
@@ -43,6 +46,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.domain.EntityScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.core.annotation.Order
 import org.springframework.core.task.TaskExecutor
@@ -108,20 +112,40 @@ class NotificatiesApiManualPluginAutoConfiguration {
         pluginService: PluginService,
         linkRepository: NotificatiesApiManualPluginAbonnementLinkRepository,
         notificatiesApiService: NotificatiesApiService,
+        misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository,
     ): NotificatiesApiManualPluginCallbackService =
-        NotificatiesApiManualPluginCallbackService(pluginService, linkRepository, notificatiesApiService)
+        NotificatiesApiManualPluginCallbackService(
+            pluginService,
+            linkRepository,
+            notificatiesApiService,
+            misroutedCallbackRepository,
+        )
 
     @Bean
     fun notificatiesApiManualPluginCallbackResource(
         callbackService: NotificatiesApiManualPluginCallbackService,
     ): NotificatiesApiManualPluginCallbackResource = NotificatiesApiManualPluginCallbackResource(callbackService)
 
+    /** Notices notificaties for a manual configuration that arrive on core's callback address. */
+    @Bean
+    fun notificatiesApiManualPluginMisroutedCallbackFilter(
+        callbackService: NotificatiesApiManualPluginCallbackService,
+    ): FilterRegistrationBean<NotificatiesApiManualPluginMisroutedCallbackFilter> =
+        FilterRegistrationBean(NotificatiesApiManualPluginMisroutedCallbackFilter(callbackService)).apply {
+            addUrlPatterns(CORE_CALLBACK_PATH)
+        }
+
     @Bean
     fun notificatiesApiManualPluginManualAbonnementService(
         pluginService: PluginService,
         pluginProcessLinkRepository: PluginProcessLinkRepository,
+        misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository,
     ): NotificatiesApiManualPluginManualAbonnementService =
-        NotificatiesApiManualPluginManualAbonnementService(pluginService, pluginProcessLinkRepository)
+        NotificatiesApiManualPluginManualAbonnementService(
+            pluginService,
+            pluginProcessLinkRepository,
+            misroutedCallbackRepository,
+        )
 
     @Bean
     fun notificatiesApiManualPluginManualAbonnementResource(
@@ -157,7 +181,7 @@ class NotificatiesApiManualPluginAutoConfiguration {
     fun notificatiesApiManualPluginHttpSecurityConfigurer(): NotificatiesApiManualPluginHttpSecurityConfigurer =
         NotificatiesApiManualPluginHttpSecurityConfigurer()
 
-    // The table has no foreign keys, so the changelog can run in any order relative to core's.
+    // The tables have no foreign keys, so the changelog can run in any order relative to core's.
     @Bean
     fun notificatiesApiManualPluginLiquibaseMasterChangeLogLocation(): LiquibaseMasterChangeLogLocation =
         LiquibaseMasterChangeLogLocation("config/liquibase/notificaties-api-manual-master.xml")

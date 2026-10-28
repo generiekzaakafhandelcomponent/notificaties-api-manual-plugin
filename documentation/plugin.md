@@ -56,8 +56,8 @@ Fill in the properties and click **Save configuration**
 | Configuration ID | Optional; leave it empty to have one generated. |
 | Configuration name | The name under which the configuration can be found in the rest of the application. |
 | Notificaties API URL | The address of Open Notificaties, for example `https://opennotificaties.example.com/api/v1/`. |
-| Callback URL | The address where Open Notificaties sends notificaties: the address through which Open Notificaties reaches Valtimo, followed by `/api/v1/notificatiesapi-manual/callback`. With **Manual**, that is usually the address of the gateway. |
 | Abonnement registration | **Automatic** (the default) or **Manual**. |
+| Callback URL | The address where Open Notificaties sends notificaties: the address through which Open Notificaties reaches Valtimo, followed by `/api/v1/notificatiesapi-manual/callback`. Required with **Automatic**. Optional with **Manual**, where it is usually the address of the gateway: Valtimo only shows it with the abonnement. |
 | Authentication header | Shown with **Automatic**. The secret that Valtimo places on the abonnement it registers. When left empty, the secret of the existing abonnement stays in use, or a random one is generated. |
 | Shared secret | Shown with **Manual**, and required. The secret that the administrator also enters on the abonnement in Open Notificaties. |
 | Authentication plugin configuration | A configuration of the **OpenNotificaties** authentication plugin, which Valtimo uses to connect to Open Notificaties. |
@@ -99,8 +99,8 @@ Open a new or existing configuration of this plugin
 Select **Manual** in **Abonnement registration**
 {% endstep %}
 {% step %}
-Enter the **Callback URL**: the address through which Open Notificaties reaches Valtimo via the gateway, followed by
-`/api/v1/notificatiesapi-manual/callback`
+Optionally enter the **Callback URL**: the address through which Open Notificaties reaches Valtimo via the gateway,
+followed by `/api/v1/notificatiesapi-manual/callback`. Valtimo doesn't use it; it only shows it with the abonnement.
 {% endstep %}
 {% step %}
 Enter a **Shared secret**: a long, random value of letters and digits
@@ -117,7 +117,8 @@ An example configuration with manual registration:
 ### Viewing what the abonnement must contain
 
 After a configuration is saved with **Manual**, its form shows what the abonnement in Open Notificaties must contain:
-the callback URL, and every channel with its filters. For a new configuration the form asks to save it first.
+the callback URL (or, when none was entered, how it is made up), and every channel with its filters. For a new
+configuration the form asks to save it first.
 
 <figure><img src="assets/plugins/notificaties-api-manual/05-abonnement.png" alt=""><figcaption>What the abonnement must contain</figcaption></figure>
 
@@ -145,7 +146,8 @@ In the admin of Open Notificaties:
 Make sure every channel in the list exists. Create a missing channel under **Kanalen**.
 {% endstep %}
 {% step %}
-Create an abonnement with the **Callback URL** shown in Valtimo
+Create an abonnement with the callback URL: the address through which Open Notificaties reaches Valtimo via the
+gateway, followed by `/api/v1/notificatiesapi-manual/callback`
 {% endstep %}
 {% step %}
 Enter the **Shared secret** of the configuration in the **Auth** field of the abonnement
@@ -155,6 +157,24 @@ Add every channel in the list, with exactly the filters shown for it. A line suc
 with key `actie` and value `create`.
 {% endstep %}
 {% endstepper %}
+
+{% hint style="danger" %}
+Don't use `/api/v1/notificatiesapi/callback`, the address of the standard Notificaties API plugin, in the abonnement
+or as the target of the gateway route. Creating the abonnement still succeeds, but the standard plugin refuses every
+notificatie with the shared secret of this plugin, so none is processed. Open Notificaties stops retrying after a few
+attempts, and those notificaties are lost.
+{% endhint %}
+
+### Notificaties on the wrong address
+
+When a notificatie with the shared secret of a **Manual** configuration arrives on
+`/api/v1/notificatiesapi/callback`, the form of that configuration shows the warning **Notifications arrive at the
+wrong address**, with the time of the last one. Valtimo also logs a warning. This also happens for the test notificatie
+that Open Notificaties sends when the abonnement is created.
+
+Change the callback URL of the abonnement in Open Notificaties, or the route in the gateway, to
+`/api/v1/notificatiesapi-manual/callback`. The warning disappears as soon as a notificatie with the shared secret
+arrives on that address. Notificaties that were refused before are not delivered again.
 
 Valtimo only processes notificaties that carry the shared secret of this plugin. Other notificaties are refused.
 

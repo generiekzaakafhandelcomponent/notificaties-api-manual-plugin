@@ -18,6 +18,7 @@ import {ChangeDetectionStrategy, Component, Input} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {ParagraphModule} from '@valtimo/components';
 import {PluginTranslatePipeModule} from '@valtimo/plugin';
+import {NotificationModule} from 'carbon-components-angular';
 import {NotificatiesApiManualPluginManualAbonnement} from '../../models';
 import {NOTIFICATIES_API_MANUAL_PLUGIN_MANUAL_ABONNEMENT_TEST_IDS} from '../../test-ids';
 
@@ -27,7 +28,7 @@ import {NOTIFICATIES_API_MANUAL_PLUGIN_MANUAL_ABONNEMENT_TEST_IDS} from '../../t
   templateUrl: './notificaties-api-manual-plugin-manual-abonnement.component.html',
   styleUrls: ['./notificaties-api-manual-plugin-manual-abonnement.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ParagraphModule, PluginTranslatePipeModule],
+  imports: [CommonModule, NotificationModule, ParagraphModule, PluginTranslatePipeModule],
 })
 export class NotificatiesApiManualPluginManualAbonnementComponent {
   @Input() public manualAbonnement: NotificatiesApiManualPluginManualAbonnement | null = null;

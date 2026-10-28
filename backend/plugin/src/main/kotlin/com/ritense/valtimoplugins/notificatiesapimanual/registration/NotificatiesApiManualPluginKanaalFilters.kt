@@ -47,7 +47,11 @@ class NotificatiesApiManualPluginKanaalFilters(
 
     fun hasManualConfiguration(url: URI): Boolean = manualConfigurations().any { normalize(it.url) == normalize(url) }
 
-    fun manualCallbackUrls(): Set<String> = manualConfigurations().map { normalize(it.callbackUrl) }.toSet()
+    fun manualCallbackUrls(): Set<String> =
+        manualConfigurations().mapNotNull { configuration -> configuration.callbackUrl?.let { normalize(it) } }.toSet()
+
+    /** The abonnement of such a configuration can be on any Open Notificaties URL, with any callback URL. */
+    fun hasManualConfigurationWithoutCallbackUrl(): Boolean = manualConfigurations().any { it.callbackUrl == null }
 
     /** Kanaal filters of one automatic abonnement, for the automatic configurations of one Open Notificaties URL. */
     fun automaticKanaalFilters(group: List<NotificatiesApiManualPlugin>): List<Abonnement.Kanaal> {

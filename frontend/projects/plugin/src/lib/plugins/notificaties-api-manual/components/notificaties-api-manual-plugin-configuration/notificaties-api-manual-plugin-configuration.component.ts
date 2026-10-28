@@ -139,9 +139,10 @@ export class NotificatiesApiManualPluginConfigurationComponent
     const valid = !!(
       formValue.configurationTitle &&
       formValue.url &&
-      formValue.callbackUrl &&
       formValue.authenticationPluginConfiguration &&
-      (formValue.abonnementRegistration !== 'manual' || formValue.authHeader?.trim())
+      (formValue.abonnementRegistration === 'manual'
+        ? formValue.authHeader?.trim()
+        : formValue.callbackUrl)
     );
 
     this.valid$.next(valid);
@@ -153,7 +154,8 @@ export class NotificatiesApiManualPluginConfigurationComponent
       ?.pipe(switchMap(() => combineLatest([this.formValue$, this.valid$]).pipe(take(1))))
       .subscribe(([formValue, valid]) => {
         if (valid) {
-          this.configuration.emit(formValue);
+          // The backend refuses an empty callback URL, but accepts none.
+          this.configuration.emit({...formValue, callbackUrl: formValue.callbackUrl || null});
         }
       });
   }

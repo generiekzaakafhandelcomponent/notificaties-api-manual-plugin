@@ -38,6 +38,8 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       callbackUrl: 'Callback URL',
       callbackUrlTooltip:
         'Het GZAC API-endpoint waar notificaties naartoe moeten worden gestuurd: .../api/v1/notificatiesapi-manual/callback',
+      callbackUrlManualTooltip:
+        'Optioneel. Het adres dat in het abonnement in Open Notificaties staat, ter informatie: GZAC gebruikt het niet zelf. Gebruik niet het adres van de standaard Notificaties API-plugin (.../api/v1/notificatiesapi/callback): dat weigert de notificaties van deze plug-in.',
       description: 'Notificaties API met een abonnement dat GZAC zelf registreert of dat een beheerder aanmaakt.',
       configurationTitle: 'Configuratienaam',
       configurationTitleTooltip:
@@ -56,6 +58,14 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
         'Vul hetzelfde geheim in bij het veld Auth van het abonnement in Open Notificaties. GZAC accepteert alleen notificaties met een geheim van deze plug-in. Gebruik een gewone waarde die niet met "Bearer" begint.',
       manualAbonnementDescription:
         'Het abonnement in Open Notificaties moet deze callback URL en deze kanalen met filters bevatten. Ook de kanalen van Notificaties API-koppelingen van de standaard Notificaties API-plugin (zoals Verzoek en Portaaltaak) met dezelfde Open Notificaties URL staan erbij.',
+      manualAbonnementCallbackUrlHint:
+        'Het adres waarlangs Open Notificaties GZAC bereikt, gevolgd door /api/v1/notificatiesapi-manual/callback',
+      manualAbonnementCallbackUrlWarning:
+        'Niet /api/v1/notificatiesapi/callback, en een gateway moet ook naar /api/v1/notificatiesapi-manual/callback doorsturen. Het adres van de standaard Notificaties API-plugin weigert de notificaties van deze plug-in, ook al lukt het aanmaken van het abonnement.',
+      manualAbonnementMisroutedTitle: 'Notificaties komen binnen op het verkeerde adres',
+      manualAbonnementMisrouted:
+        'GZAC kreeg een notificatie met het geheim van deze configuratie op het adres van de standaard Notificaties API-plugin (/api/v1/notificatiesapi/callback). Dat adres weigert hem, dus hij wordt niet verwerkt. Wijzig de callback URL van het abonnement in Open Notificaties, of de route in de gateway, naar .../api/v1/notificatiesapi-manual/callback. Deze melding verdwijnt zodra er een notificatie op het juiste adres binnenkomt.',
+      manualAbonnementMisroutedAt: 'Laatst ontvangen:',
       manualAbonnementKanaal: 'Kanaal',
       manualAbonnementNoKanalen: 'Er zijn nog geen kanalen nodig voor deze configuratie.',
       manualAbonnementSaveFirst:
@@ -95,6 +105,8 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       callbackUrl: 'Callback URL',
       callbackUrlTooltip:
         'The GZAC API-endpoint where notifications should be sent: .../api/v1/notificatiesapi-manual/callback',
+      callbackUrlManualTooltip:
+        'Optional. The address entered in the abonnement in Open Notificaties, for reference: GZAC does not use it itself. Do not use the address of the standard Notificaties API plugin (.../api/v1/notificatiesapi/callback): it refuses the notifications of this plugin.',
       description: 'Notificaties API with an abonnement that GZAC registers itself or that an administrator creates.',
       configurationTitle: 'Configuration name',
       configurationTitleTooltip:
@@ -113,6 +125,14 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
         'Enter the same secret in the Auth field of the abonnement in Open Notificaties. GZAC only accepts notifications that carry a secret of this plugin. Use a plain value that does not start with "Bearer".',
       manualAbonnementDescription:
         'The abonnement in Open Notificaties must contain this callback URL and these channels with their filters. The channels of links to the standard Notificaties API plugin (such as Verzoek and Portaaltaak) with the same Open Notificaties URL are included.',
+      manualAbonnementCallbackUrlHint:
+        'The address through which Open Notificaties reaches GZAC, followed by /api/v1/notificatiesapi-manual/callback',
+      manualAbonnementCallbackUrlWarning:
+        'Not /api/v1/notificatiesapi/callback, and a gateway must also forward to /api/v1/notificatiesapi-manual/callback. The address of the standard Notificaties API plugin refuses the notifications of this plugin, even though creating the abonnement succeeds.',
+      manualAbonnementMisroutedTitle: 'Notifications arrive at the wrong address',
+      manualAbonnementMisrouted:
+        'GZAC received a notification with the secret of this configuration at the address of the standard Notificaties API plugin (/api/v1/notificatiesapi/callback). That address refuses it, so it is not processed. Change the callback URL of the abonnement in Open Notificaties, or the route in the gateway, to .../api/v1/notificatiesapi-manual/callback. This message disappears as soon as a notification arrives at the right address.',
+      manualAbonnementMisroutedAt: 'Last received:',
       manualAbonnementKanaal: 'Channel',
       manualAbonnementNoKanalen: 'No channels are needed for this configuration yet.',
       manualAbonnementSaveFirst:
@@ -151,6 +171,7 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       urlTooltip: 'Die URL zur REST API von Notificaties',
       callbackUrl: 'Callback URL',
       callbackUrlTooltip: 'Der GZAC API-Endpunkt, an den Benachrichtigungen gesendet werden: .../api/v1/notificatiesapi-manual/callback',
+      callbackUrlManualTooltip: 'Optional. Die Adresse, die im Abonnement in Open Notificaties steht, zur Information: GZAC verwendet sie nicht selbst. Verwenden Sie nicht die Adresse des Standard-Plugins Notificaties API (.../api/v1/notificatiesapi/callback): Sie lehnt die Benachrichtigungen dieses Plugins ab.',
       description: 'Notificaties API mit einem Abonnement, das GZAC selbst registriert oder das ein Administrator anlegt.',
       configurationTitle: 'Konfigurationsname',
       configurationTitleTooltip: 'Der Name der aktuellen Plugin-Konfiguration. Unter diesem Namen ist die Konfiguration im Rest der Anwendung zu finden.',
@@ -164,6 +185,11 @@ const notificatiesApiManualPluginSpecification: PluginSpecification = {
       sharedSecret: 'Gemeinsames Geheimnis',
       sharedSecretTooltip: 'Geben Sie dasselbe Geheimnis im Feld Auth des Abonnements in Open Notificaties ein. GZAC akzeptiert nur Benachrichtigungen mit einem Geheimnis dieses Plugins. Verwenden Sie einen einfachen Wert, der nicht mit "Bearer" beginnt.',
       manualAbonnementDescription: 'Das Abonnement in Open Notificaties muss diese Callback URL und diese Kanäle mit ihren Filtern enthalten. Die Kanäle von Verknüpfungen mit dem Standard-Plugin Notificaties API (wie Verzoek und Portaaltaak) mit derselben Open Notificaties URL sind enthalten.',
+      manualAbonnementCallbackUrlHint: 'Die Adresse, über die Open Notificaties GZAC erreicht, gefolgt von /api/v1/notificatiesapi-manual/callback',
+      manualAbonnementCallbackUrlWarning: 'Nicht /api/v1/notificatiesapi/callback, und ein Gateway muss ebenfalls an /api/v1/notificatiesapi-manual/callback weiterleiten. Die Adresse des Standard-Plugins Notificaties API lehnt die Benachrichtigungen dieses Plugins ab, auch wenn das Anlegen des Abonnements gelingt.',
+      manualAbonnementMisroutedTitle: 'Benachrichtigungen kommen an der falschen Adresse an',
+      manualAbonnementMisrouted: 'GZAC hat eine Benachrichtigung mit dem Geheimnis dieser Konfiguration an der Adresse des Standard-Plugins Notificaties API (/api/v1/notificatiesapi/callback) erhalten. Diese Adresse lehnt sie ab, daher wird sie nicht verarbeitet. Ändern Sie die Callback URL des Abonnements in Open Notificaties oder die Route im Gateway in .../api/v1/notificatiesapi-manual/callback. Diese Meldung verschwindet, sobald eine Benachrichtigung an der richtigen Adresse ankommt.',
+      manualAbonnementMisroutedAt: 'Zuletzt empfangen:',
       manualAbonnementKanaal: 'Kanal',
       manualAbonnementNoKanalen: 'Für diese Konfiguration werden noch keine Kanäle benötigt.',
       manualAbonnementSaveFirst: 'Speichern Sie die Konfiguration mit manueller Registrierung, um zu sehen, welche Kanäle und Filter das Abonnement enthalten muss.',
