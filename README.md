@@ -1,5 +1,10 @@
 # Notificaties API plugin with manual abonnement registration
 
+> [!IMPORTANT]
+> This plugin is replaced by [valtimo-platform/valtimo#1155](https://github.com/valtimo-platform/valtimo/pull/1155),
+> which adds manual abonnement registration to the standard Notificaties API plugin. Use the standard plugin once
+> your Valtimo version includes that change.
+
 A GZAC plugin that receives notificaties from Open Notificaties through an abonnement that an administrator creates,
 for environments where all traffic between systems goes through a gateway that checks certificates. It is a copy of
 the standard Notificaties API plugin under its own key (`notificatiesapi-manual`), with manual abonnement registration
@@ -11,8 +16,8 @@ changes nothing for the standard plugin.
 | `main` | 13.41.0 and later 13.x | `1.0.0` |
 | `v12`  | 12.45.0 and later 12.x | `1.0.0-V12` |
 
-From Valtimo 13.52.0 the standard Notificaties API plugin has manual abonnement registration itself; move to it when
-you upgrade.
+From Valtimo 13.52.0 the standard Notificaties API plugin has manual abonnement registration itself
+([valtimo#1155](https://github.com/valtimo-platform/valtimo/pull/1155)); move to it when you upgrade.
 
 ## Documentation
 
