@@ -16,11 +16,22 @@
 
 package com.ritense.valtimoplugins.notificatiesapimanual
 
+import com.ritense.notificatiesapi.client.NotificatiesApiClient
+import org.mockito.kotlin.mock
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
 
 @SpringBootApplication
-class TestApplication
+class TestApplication {
+    /**
+     * Core's client, shared with this plugin: no test may reach a real Open Notificaties. A plain bean, which core's
+     * `@ConditionalOnMissingBean` gives way to, rather than `@MockitoBean`, which bypasses bean post-processors: this
+     * plugin wraps it as it wraps core's own.
+     */
+    @Bean
+    fun notificatiesApiClient(): NotificatiesApiClient = mock()
+}
 
 fun main(args: Array<String>) {
     runApplication<TestApplication>(*args)

@@ -17,27 +17,20 @@
 import {NgModule} from '@angular/core';
 import {NotificatiesApiManualPluginConfigurationComponent} from './components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
 import {NotificatiesApiManualPluginManualAbonnementComponent} from './components/manual-abonnement/notificaties-api-manual-plugin-manual-abonnement.component';
-// The publish/receive action forms are core's: they take their texts from this plugin's translations via pluginId.
-import {NotificatiesApiPluginModule, PluginTranslatePipeModule} from '@valtimo/plugin';
+import {PluginTranslatePipeModule} from '@valtimo/plugin';
 import {CommonModule} from '@angular/common';
-import {
-  FormModule,
-  InputModule,
-  ParagraphModule,
-  SelectModule,
-} from '@valtimo/components';
+import {FormModule, InputModule} from '@valtimo/components';
+import {NotificationModule} from 'carbon-components-angular';
 
 @NgModule({
   declarations: [NotificatiesApiManualPluginConfigurationComponent],
   imports: [
     CommonModule,
-    NotificatiesApiPluginModule,
     NotificatiesApiManualPluginManualAbonnementComponent,
     PluginTranslatePipeModule,
     FormModule,
     InputModule,
-    SelectModule,
-    ParagraphModule,
+    NotificationModule,
   ],
   exports: [NotificatiesApiManualPluginConfigurationComponent],
 })

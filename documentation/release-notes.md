@@ -1,34 +1,37 @@
 # Release notes
 
-## 1.0.1
+## 2.0.0
 
 For Valtimo 13.41.0 and later 13.x versions.
 
 ---
 
-## Improvements
+## Breaking changes
 
-### Callback URL optional with manual registration
+### The abonnement belongs to the standard plugin
 
-With **Manual** abonnement registration, the **Callback URL** no longer has to be filled in: the administrator enters
-it in the abonnement in Open Notificaties, and Valtimo doesn't use it. When it is filled in, the configuration form
-shows it with the abonnement; otherwise the form shows how it is made up. With **Automatic** registration it stays
-required.
+A configuration of this plugin now only has a **Notificaties API URL**. It tells Valtimo that an administrator creates
+the abonnement in that Open Notificaties, and the standard Notificaties API plugin does everything else:
 
-**Abonnement registration** now comes before **Callback URL** in the configuration form, so the form shows whether the
-callback URL is required.
+- **Verzoek**, **Portaaltaak** and process links are linked to a configuration of the standard plugin with the same
+  URL;
+- notificaties arrive on the callback address of the standard plugin (`/api/v1/notificatiesapi/callback`), with its
+  **Authentication header** as secret;
+- for that Open Notificaties, the standard plugin creates, changes and removes nothing: no abonnement and no channels.
+  It keeps registering abonnementen in other Open Notificaties, so `valtimo.zgw.register-abonnementen: false` is no
+  longer needed.
 
-When a **Manual** configuration has no callback URL, **Automatic** configurations no longer delete abonnementen in Open
-Notificaties that Valtimo didn't register, because the administrator's abonnement can't be told apart from a leftover
-one. Remove leftover abonnementen in Open Notificaties yourself.
+Before, Verzoek and Portaaltaak needed a configuration of both plugins with the same values, and their notificaties
+arrived through this plugin's own callback.
 
-### Warning for notificaties on the address of the standard plugin
+The form of this plugin starts with a notice that the standard plugin is configured after it, and then shows the
+configuration of the standard plugin with the same URL (with a warning when there is none, more than one, or one
+without Authentication header), and the callback URL and channels the abonnement must contain.
 
-An abonnement or gateway route that points to `/api/v1/notificatiesapi/callback`, the address of the standard
-Notificaties API plugin, is accepted by Open Notificaties, but every notificatie is then refused and lost. The form of
-a **Manual** configuration now warns against this address, and shows a warning with the time of the last notificatie
-when one with its shared secret arrived there. Valtimo also logs a warning. The warning disappears once a notificatie
-arrives on `/api/v1/notificatiesapi-manual/callback`.
+Removed: the callback address `/api/v1/notificatiesapi-manual/callback`, **Automatic** registration, the shared secret,
+the **Publish a notification** and **Receive a notification** actions, the warning for notificaties on the wrong
+address, the `valtimo.notificaties-api-manual.*` properties and the plugin's database tables. See
+**Upgrading from 1.0.x** in [Installation and technical details](technical-details.md).
 
 **[Try it out →](plugin.md)**
 

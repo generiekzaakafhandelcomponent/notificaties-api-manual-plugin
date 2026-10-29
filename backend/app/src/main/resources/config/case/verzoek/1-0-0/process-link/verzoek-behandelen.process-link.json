@@ -1,0 +1,8 @@
+[
+    {
+        "activityId": "verzoek-beoordelen",
+        "activityType": "bpmn:UserTask:create",
+        "processLinkType": "form",
+        "formDefinitionName": "verzoek-beoordelen"
+    }
+]

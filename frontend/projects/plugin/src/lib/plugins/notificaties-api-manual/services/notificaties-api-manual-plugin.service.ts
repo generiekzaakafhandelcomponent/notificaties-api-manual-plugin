@@ -33,7 +33,7 @@ export class NotificatiesApiManualPluginService {
     this.valtimoEndpointUri = configService.config?.valtimoApi?.endpointUri;
   }
 
-  // A 404 means the configuration is not saved as manual yet, which the form shows as a hint.
+  // A 404 means the configuration is not saved yet, which the form shows as a hint.
   public getManualAbonnement(configurationId: string): Observable<NotificatiesApiManualPluginManualAbonnement> {
     return this.http.get<NotificatiesApiManualPluginManualAbonnement>(
       `${this.valtimoEndpointUri}management/v1/notificatiesapi-manual/configurations/${configurationId}/manual-abonnement`,

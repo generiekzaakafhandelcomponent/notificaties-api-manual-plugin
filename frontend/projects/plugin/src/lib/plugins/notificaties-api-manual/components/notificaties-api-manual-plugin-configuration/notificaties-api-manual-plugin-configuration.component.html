@@ -14,12 +14,22 @@
   ~ limitations under the License.
   -->
 
+<cds-inline-notification
+  [attr.data-test-id]="testIds.order"
+  [notificationObj]="{
+    type: 'info',
+    title: ('orderTitle' | pluginTranslate: pluginId | async),
+    message: ('orderMessage' | pluginTranslate: pluginId | async),
+    showClose: false,
+    lowContrast: true,
+  }"
+></cds-inline-notification>
+
 <v-form
   (valueChange)="formValueChange($event)"
   *ngIf="{
     disabled: disabled$ | async,
     prefill: prefillConfiguration$ ? (prefillConfiguration$ | async) : null,
-    manual: manualRegistration$ | async,
   } as obs"
 >
   <v-input
@@ -32,7 +42,7 @@
     [required]="true"
     [trim]="true"
     [tooltip]="'configurationTitleTooltip' | pluginTranslate: pluginId | async"
-    placeholder="Notificaties API Plugin"
+    placeholder="Open Notificaties via gateway"
   >
   </v-input>
   <v-input
@@ -48,74 +58,9 @@
     placeholder="https://opennotificaties.example.com/api/v1/"
   >
   </v-input>
-  <ng-container
-    *ngIf="{registrationSelectItems: abonnementRegistrationSelectItems$ | async} as registrationObs"
-  >
-    <v-select
-      [clearable]="false"
-      [defaultSelectionId]="obs.prefill?.abonnementRegistration || 'automatic'"
-      [disabled]="obs.disabled"
-      [items]="registrationObs.registrationSelectItems"
-      [loading]="!registrationObs.registrationSelectItems"
-      [margin]="true"
-      [required]="true"
-      [title]="'abonnementRegistration' | pluginTranslate: pluginId | async"
-      [tooltip]="'abonnementRegistrationTooltip' | pluginTranslate: pluginId | async"
-      [attr.data-test-id]="testIds.abonnementRegistration"
-      name="abonnementRegistration"
-    ></v-select>
-  </ng-container>
-  <v-input
-    name="callbackUrl"
-    [attr.data-test-id]="testIds.callbackUrl"
-    [title]="'callbackUrl' | pluginTranslate: pluginId | async"
-    [margin]="true"
-    [disabled]="obs.disabled"
-    [defaultValue]="obs.prefill?.callbackUrl"
-    [required]="!obs.manual"
-    [trim]="true"
-    [tooltip]="
-      (obs.manual ? 'callbackUrlManualTooltip' : 'callbackUrlTooltip') | pluginTranslate: pluginId | async
-    "
-    placeholder="https://{gzac-back-end-url}/api/v1/notificatiesapi-manual/callback"
-  >
-  </v-input>
-
-  <v-input
-    name="authHeader"
-    [maxLength]="255"
-    [attr.data-test-id]="testIds.authHeader"
-    [title]="(obs.manual ? 'sharedSecret' : 'authHeader') | pluginTranslate: pluginId | async"
-    [margin]="true"
-    [disabled]="obs.disabled"
-    [defaultValue]="obs.prefill?.authHeader"
-    [required]="obs.manual"
-    [trim]="true"
-    [tooltip]="
-      (obs.manual ? 'sharedSecretTooltip' : 'authHeaderTooltip') | pluginTranslate: pluginId | async
-    "
-    type="password"
-  >
-  </v-input>
-  <ng-container
-    *ngIf="{authenticationPluginSelectItems: authenticationPluginSelectItems$ | async} as authObs"
-  >
-    <v-select
-      [items]="authObs.authenticationPluginSelectItems"
-      [margin]="true"
-      name="authenticationPluginConfiguration"
-      [attr.data-test-id]="testIds.authenticationPluginConfiguration"
-      [title]="'authenticationPluginConfiguration' | pluginTranslate: pluginId | async"
-      [disabled]="obs.disabled"
-      [defaultSelectionId]="obs.prefill?.authenticationPluginConfiguration"
-      [required]="true"
-      [loading]="!authObs.authenticationPluginSelectItems"
-    ></v-select>
-  </ng-container>
 </v-form>
 
 <valtimo-notificaties-api-manual-plugin-manual-abonnement
-  *ngIf="manualRegistration$ | async"
   [manualAbonnement]="manualAbonnement$ | async"
   [pluginId]="pluginId"
 ></valtimo-notificaties-api-manual-plugin-manual-abonnement>

@@ -1,0 +1,95 @@
+### Verzoek through the Notificaties API plugin with a manual abonnement (sandbox).
+#
+# Environments:
+#   mtls    through the mTLS gateway, with Valtimo's client certificate (http-client.private.env.json). The
+#           certificates come from ./backend/app/imports/mtls-gateway/generate-certs.sh.
+#   direct  straight to the Objecten API and Valtimo, without the gateway.
+#
+# Run './backend/app/verzoek-scenario.sh abonnement' once first: it creates kanaal 'objecten' and the manual abonnement
+# in Open Notificaties. The Objecten API in Docker only accepts the objecttype under 'host.docker.internal'.
+# See documentation/example-application.md, 'Trying Verzoek'.
+
+### 1. Submit a verzoek
+# The Objecten API notifies Open Notificaties, which delivers the notificatie to the callback of the standard
+# Notificaties API plugin (through its egress proxy and the gateway). Within a few seconds a Verzoek case appears in Valtimo with this voornaam, bsn and the
+# URL of the object; with 'mtls' Verzoek fetches the object through the gateway.
+< {%
+    request.variables.set("today", new Date().toISOString().slice(0, 10));
+%}
+POST {{objects_api_url}}
+Authorization: Token {{objects_api_token}}
+Content-Crs: EPSG:4326
+Content-Type: application/json
+
+{
+  "type": "{{objecttype_url_verzoek}}",
+  "record": {
+    "typeVersion": {{objecttype_version}},
+    "data": {
+      "type": "verzoek-test",
+      "bsn": "999990755",
+      "data": {
+        "voornaam": "Jan"
+      },
+      "pdf_url": "",
+      "attachments": [],
+      "submission_id": "{{$random.uuid}}"
+    },
+    "startAt": "{{today}}"
+  }
+}
+
+> {%
+    client.test("Verzoek object created", () => client.assert(response.status === 201, "status " + response.status));
+    client.global.set("verzoek_object_url", response.body.url);
+%}
+
+### 2. Fetch the verzoek object, as Verzoek does
+GET {{verzoek_object_url}}
+Authorization: Token {{objects_api_token}}
+Accept-Crs: EPSG:4326
+
+### 3. Deliver the notificatie of request 1 to the callback yourself, without Open Notificaties
+# With 'mtls' through the gateway: it accepts any client certificate signed by the sandbox CA, here Valtimo's.
+# Only when Open Notificaties is not used: a notificatie that also arrived through Open Notificaties creates a second
+# case, because its 'aanmaakdatum' differs.
+POST {{callback_url}}
+Authorization: {{shared_secret}}
+Content-Type: application/json
+
+{
+  "kanaal": "objecten",
+  "hoofdObject": "{{verzoek_object_url}}",
+  "resource": "object",
+  "resourceUrl": "{{verzoek_object_url}}",
+  "actie": "create",
+  "aanmaakdatum": "{{$isoTimestamp}}",
+  "kenmerken": {
+    "objectType": "{{objecttype_url_verzoek}}"
+  }
+}
+
+> {%
+    client.test("Notificatie accepted", () => client.assert(response.status === 204, "status " + response.status));
+%}
+
+### 4. The callback refuses another secret (401, from Valtimo)
+POST {{callback_url}}
+Authorization: not-the-shared-secret
+Content-Type: application/json
+
+{
+  "kanaal": "objecten",
+  "hoofdObject": "{{verzoek_object_url}}",
+  "resource": "object",
+  "resourceUrl": "{{verzoek_object_url}}",
+  "actie": "create",
+  "aanmaakdatum": "{{$isoTimestamp}}",
+  "kenmerken": {
+    "objectType": "{{objecttype_url_verzoek}}"
+  }
+}
+
+> {%
+    client.test("Notificatie refused", () => client.assert(response.status === 401, "status " + response.status));
+%}

@@ -1,7 +1,8 @@
 val kotlinLoggingVersion: String by project
 val nettyResolverDnsNativeMacOsVersion: String by project
 
-val valtimoVersion: String by project
+// The sandbox runs a later Valtimo than the minimum the plugin is compiled against (see gradle.properties)
+val valtimoVersion = property("sandboxValtimoVersion") as String
 
 dependencies {
     implementation(platform("com.ritense.valtimo:valtimo-dependency-versions:$valtimoVersion"))
@@ -19,6 +20,9 @@ dependencies {
     }
 
     implementation(project(":backend:plugin"))
+
+    // Mutual TLS towards the mTLS gateway in front of the ZGW APIs (see documentation/example-application.md)
+    implementation("com.ritense.valtimoplugins:http-client-authentication:3.0.0")
 }
 
 tasks.jar {

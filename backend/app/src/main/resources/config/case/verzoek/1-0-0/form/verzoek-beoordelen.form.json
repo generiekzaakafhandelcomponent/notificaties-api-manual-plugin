@@ -1,0 +1,46 @@
+{
+    "display": "form",
+    "components": [
+        {
+            "key": "html",
+            "type": "htmlelement",
+            "input": false,
+            "label": "Instructions",
+            "content": "This case was created by the Verzoek plugin from a notificatie received through the Notificaties API plugin with a manual abonnement.",
+            "tableView": false,
+            "refreshOnChange": false
+        },
+        {
+            "key": "voornaam",
+            "type": "textfield",
+            "input": true,
+            "label": "Voornaam",
+            "disabled": true,
+            "tableView": true
+        },
+        {
+            "key": "bsn",
+            "type": "textfield",
+            "input": true,
+            "label": "BSN",
+            "disabled": true,
+            "tableView": true
+        },
+        {
+            "key": "verzoekObjectUrl",
+            "type": "textfield",
+            "input": true,
+            "label": "Verzoek object",
+            "disabled": true,
+            "tableView": true
+        },
+        {
+            "key": "submit",
+            "type": "button",
+            "input": true,
+            "label": "Complete",
+            "tableView": false,
+            "disableOnInvalid": true
+        }
+    ]
+}

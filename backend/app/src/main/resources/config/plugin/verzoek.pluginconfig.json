@@ -1,0 +1,42 @@
+[
+    {
+        "id": "c4e2a9d7-1b3f-4a6e-8c5d-2f7e9b0a1d34",
+        "title": "Verzoek (Autodeployed)",
+        "pluginDefinitionKey": "verzoek",
+        "properties": {
+            "notificatiesApiPluginConfiguration": "020e6ca3-1c15-4496-a4cf-67bfaa36332f",
+            "processToStart": "verzoek-behandelen",
+            "rsin": "051845623",
+            "verzoekProperties": [
+                {
+                    "type": "verzoek-test",
+                    "caseDefinitionKey": "verzoek",
+                    "caseDefinitionVersionTag": "1.0.0",
+                    "processDefinitionKey": "verzoek-behandelen",
+                    "objectManagementId": "8d3b5f2e-6c1a-4e7b-9f02-3a4c5d6e7f81",
+                    "initiatorRoltypeUrl": "https://127.0.0.1:8444/catalogi/api/v1/roltypen/1c359a1b-c38d-47b8-bed5-994db88ead61",
+                    "initiatorRolDescription": "Aanvrager",
+                    "copyStrategy": "specified",
+                    "mapping": [
+                        {
+                            "source": "/voornaam",
+                            "target": "doc:/voornaam"
+                        },
+                        {
+                            "source": "object:/record/data/bsn",
+                            "target": "doc:/bsn"
+                        },
+                        {
+                            "source": "object:/url",
+                            "target": "doc:/verzoekObjectUrl"
+                        },
+                        {
+                            "source": "/voornaam",
+                            "target": "pv:voornaam"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+]

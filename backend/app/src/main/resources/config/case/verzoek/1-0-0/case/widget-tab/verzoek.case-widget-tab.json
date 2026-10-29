@@ -1,0 +1,47 @@
+[
+    {
+        "key": "summary",
+        "widgets": [
+            {
+                "type": "fields",
+                "key": "verzoek",
+                "title": "Verzoek",
+                "width": 2,
+                "highContrast": true,
+                "properties": {
+                    "columns": [
+                        [
+                            {
+                                "key": "voornaam",
+                                "title": "Voornaam",
+                                "value": "doc:/voornaam",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "bsn",
+                                "title": "BSN",
+                                "value": "doc:/bsn",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "verzoekObjectUrl",
+                                "title": "Verzoek object",
+                                "value": "doc:/verzoekObjectUrl",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            }
+                        ]
+                    ]
+                }
+            }
+        ]
+    }
+]

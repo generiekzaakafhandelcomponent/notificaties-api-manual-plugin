@@ -9,9 +9,9 @@
         "activityId": "wait-for-notificatie",
         "activityType": "bpmn:ReceiveTask:end",
         "processLinkType": "plugin",
-        "pluginDefinitionKey": "notificatiesapi-manual",
+        "pluginDefinitionKey": "notificatiesapi",
         "pluginActionDefinitionKey": "receive-notificatie",
-        "pluginConfigurationId": "6f1d6c0e-5a3b-4f0e-9a51-0b6f3d2c7a10",
+        "pluginConfigurationId": "020e6ca3-1c15-4496-a4cf-67bfaa36332f",
         "actionProperties": {
             "kanaal": "objecten",
             "actie": "create"

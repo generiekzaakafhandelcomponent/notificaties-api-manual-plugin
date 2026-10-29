@@ -1,0 +1,8 @@
+{
+    "key": "verzoek",
+    "name": "Verzoek",
+    "versionTag": "1.0.0",
+    "final": false,
+    "canHaveAssignee": true,
+    "autoAssignTasks": false
+}

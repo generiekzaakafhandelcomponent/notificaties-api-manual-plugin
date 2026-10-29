@@ -16,14 +16,11 @@
 
 package com.ritense.valtimoplugins.notificatiesapimanual.plugin
 
-import com.ritense.notificatiesapi.client.NotificatiesApiClient
 import com.ritense.plugin.PluginFactory
 import com.ritense.plugin.service.PluginService
 
 class NotificatiesApiManualPluginFactory(
     pluginService: PluginService,
-    private val client: NotificatiesApiClient,
 ) : PluginFactory<NotificatiesApiManualPlugin>(pluginService) {
-    override fun create(): NotificatiesApiManualPlugin =
-        NotificatiesApiManualPlugin(super.pluginConfigurationId, client, pluginService)
+    override fun create(): NotificatiesApiManualPlugin = NotificatiesApiManualPlugin(super.pluginConfigurationId)
 }

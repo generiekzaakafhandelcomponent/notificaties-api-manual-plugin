@@ -34,4 +34,10 @@ export class NotificatiesApiManualPluginManualAbonnementComponent {
   @Input() public manualAbonnement: NotificatiesApiManualPluginManualAbonnement | null = null;
   @Input() public pluginId: string;
   protected readonly testIds = NOTIFICATIES_API_MANUAL_PLUGIN_MANUAL_ABONNEMENT_TEST_IDS;
+
+  /** The callback URL of the standard configuration, when exactly one uses this URL. */
+  public get callbackUrl(): string | null {
+    const configurations = this.manualAbonnement?.coreConfigurations ?? [];
+    return configurations.length === 1 ? configurations[0].callbackUrl : null;
+  }
 }

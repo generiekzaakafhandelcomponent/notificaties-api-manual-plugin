@@ -43,12 +43,23 @@ describe('NotificatiesApiManualPluginManualAbonnementComponent', () => {
       .compileComponents();
 
     fixture = TestBed.createComponent(NotificatiesApiManualPluginManualAbonnementComponent);
-    fixture.componentInstance.pluginId = 'notificatiesapi';
+    fixture.componentInstance.pluginId = 'notificatiesapi-manual';
   });
 
-  it('should show the callback URL and every kanaal with its filters', () => {
+  const coreConfiguration = (overrides: object = {}) => ({
+    id: '020e6ca3-1c15-4496-a4cf-67bfaa36332f',
+    title: 'Notificaties API via gateway',
+    callbackUrl: 'https://gateway.example.com/api/v1/notificatiesapi/callback',
+    authHeaderFilledIn: true,
+    ...overrides,
+  });
+
+  const notification = (testId: string) =>
+    byTestId(testId)[0] as HTMLElement & {notificationObj: {type: string; message: string}};
+
+  it('should show the standard configuration, its callback URL and every kanaal with its filters', () => {
     fixture.componentInstance.manualAbonnement = {
-      callbackUrl: 'https://gateway.example.com/api/v1/notificatiesapi-manual/callback',
+      coreConfigurations: [coreConfiguration()],
       kanalen: [
         {naam: 'zaken', filters: {actie: 'create'}},
         {
@@ -59,61 +70,62 @@ describe('NotificatiesApiManualPluginManualAbonnementComponent', () => {
     };
     fixture.detectChanges();
 
+    expect(byTestId(testIds.standardPlugin)[0].textContent).toContain('Notificaties API via gateway');
+    expect(byTestId(testIds.standardPlugin)[0].textContent).toContain('standardPluginAuthHeaderFilledIn');
     expect(byTestId(testIds.callbackUrl)[0].textContent.trim()).toBe(
-      'https://gateway.example.com/api/v1/notificatiesapi-manual/callback'
+      'https://gateway.example.com/api/v1/notificatiesapi/callback'
     );
+    expect(fixture.nativeElement.textContent).toContain('abonnementAuthValue');
     const kanalen = byTestId(testIds.kanaal);
     expect(kanalen.length).toBe(2);
     expect(kanalen[0].querySelector('strong').textContent.trim()).toBe('zaken');
     expect(kanalen[0].textContent).toContain('actie = create');
-    expect(kanalen[1].querySelector('strong').textContent.trim()).toBe('objecten');
     expect(kanalen[1].textContent).toContain('objectType = https://objecttypen.example.com/1');
-    expect(kanalen[1].textContent).toContain('actie = update');
-    expect(fixture.nativeElement.textContent).not.toContain('manualAbonnementSaveFirst');
+    expect(byTestId(testIds.standardPluginMissing).length).toBe(0);
+    expect(byTestId(testIds.standardPluginMultiple).length).toBe(0);
+    expect(byTestId(testIds.standardPluginAuthHeaderEmpty).length).toBe(0);
   });
 
-  it('should show where the callback URL points when the configuration has none', () => {
-    fixture.componentInstance.manualAbonnement = {callbackUrl: null, kanalen: []};
+  it('should ask for the standard configuration when there is none yet', () => {
+    fixture.componentInstance.manualAbonnement = {coreConfigurations: [], kanalen: []};
     fixture.detectChanges();
 
+    expect(notification(testIds.standardPluginMissing).notificationObj.type).toBe('warning');
+    expect(notification(testIds.standardPluginMissing).notificationObj.message).toBe(
+      'standardPluginMissing'
+    );
     expect(byTestId(testIds.callbackUrl).length).toBe(0);
-    expect(byTestId(testIds.callbackUrlHint)[0].textContent.trim()).toBe(
-      'manualAbonnementCallbackUrlHint'
-    );
+    expect(byTestId(testIds.callbackUrlHint)[0].textContent.trim()).toBe('abonnementCallbackUrlHint');
+    expect(fixture.nativeElement.textContent).toContain('abonnementNoKanalen');
   });
 
-  it('should always warn against the callback address of the standard plugin', () => {
-    fixture.componentInstance.manualAbonnement = {callbackUrl: null, kanalen: []};
-    fixture.detectChanges();
-
-    expect(byTestId(testIds.callbackUrlWarning)[0].textContent.trim()).toBe(
-      'manualAbonnementCallbackUrlWarning'
-    );
-    expect(byTestId(testIds.misroutedCallback).length).toBe(0);
-  });
-
-  it('should warn when notificaties for this configuration arrived on the standard plugin', () => {
+  it('should warn when the Auth header of the standard configuration is empty', () => {
     fixture.componentInstance.manualAbonnement = {
-      callbackUrl: null,
+      coreConfigurations: [coreConfiguration({authHeaderFilledIn: false})],
       kanalen: [],
-      misroutedCallbackAt: '2026-10-28T09:15:00Z',
     };
     fixture.detectChanges();
 
-    const notification = byTestId(testIds.misroutedCallback)[0] as HTMLElement & {
-      notificationObj: {type: string; title: string; message: string};
-    };
-    expect(notification.notificationObj.type).toBe('warning');
-    expect(notification.notificationObj.title).toBe('manualAbonnementMisroutedTitle');
-    expect(notification.notificationObj.message).toContain('manualAbonnementMisrouted manualAbonnementMisroutedAt');
-    expect(notification.notificationObj.message).toContain('2026');
+    expect(notification(testIds.standardPluginAuthHeaderEmpty).notificationObj.type).toBe('warning');
   });
 
-  it('should ask to save the configuration first when no kanalen are known', () => {
+  it('should warn when more than one standard configuration uses the URL', () => {
+    fixture.componentInstance.manualAbonnement = {
+      coreConfigurations: [coreConfiguration(), coreConfiguration({id: 'other', title: 'Andere'})],
+      kanalen: [],
+    };
+    fixture.detectChanges();
+
+    expect(notification(testIds.standardPluginMultiple).notificationObj.type).toBe('warning');
+    expect(byTestId(testIds.standardPlugin).length).toBe(2);
+    expect(byTestId(testIds.callbackUrl).length).toBe(0);
+  });
+
+  it('should ask to save the configuration first', () => {
     fixture.componentInstance.manualAbonnement = null;
     fixture.detectChanges();
 
-    expect(byTestId(testIds.callbackUrl).length).toBe(0);
-    expect(fixture.nativeElement.textContent).toContain('manualAbonnementSaveFirst');
+    expect(byTestId(testIds.standardPlugin).length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('saveFirst');
   });
 });

@@ -18,72 +18,47 @@ package com.ritense.valtimoplugins.notificatiesapimanual
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.ritense.notificatiesapi.NotificatiesApiAuthentication
-import com.ritense.notificatiesapi.client.NotificatiesApiClient
 import com.ritense.plugin.domain.PluginConfiguration
 import com.ritense.plugin.domain.PluginConfigurationId
 import com.ritense.plugin.domain.PluginDefinition
 import com.ritense.plugin.domain.PluginProcessLink
-import com.ritense.plugin.service.PluginService
 import com.ritense.processlink.domain.ActivityTypeWithEventName
 import com.ritense.valtimo.contract.json.MapperSingleton
-import com.ritense.valtimoplugins.notificatiesapimanual.domain.AbonnementRegistration
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import java.net.URI
 import java.util.UUID
 
 object TestFixtures {
     const val ON_URL = "http://open-notificaties.example.com/api/v1/"
     const val OTHER_ON_URL = "http://other-notificaties.example.com/api/v1/"
-    const val CALLBACK_URL = "http://valtimo.example.com/api/v1/notificatiesapi-manual/callback"
     const val CORE_CALLBACK_URL = "http://valtimo.example.com/api/v1/notificatiesapi/callback"
 
     val objectMapper = MapperSingleton.get()
 
     val authentication: NotificatiesApiAuthentication = mock()
 
-    fun plugin(
-        id: UUID = UUID.randomUUID(),
-        registration: AbonnementRegistration = AbonnementRegistration.AUTOMATIC,
-        secret: String? = null,
-        url: String = ON_URL,
-        callbackUrl: String? = CALLBACK_URL,
-        client: NotificatiesApiClient = mock(),
-        pluginService: PluginService = mock(),
-    ) = NotificatiesApiManualPlugin(PluginConfigurationId.existingId(id), client, pluginService).apply {
-        this.url = URI(url)
-        this.callbackUrl = callbackUrl?.let { URI(it) }
-        this.authHeader = secret
-        this.abonnementRegistration = registration
-        this.authenticationPluginConfiguration = authentication
-    }
-
     fun pluginConfiguration(
         id: UUID,
         key: String,
         properties: Map<String, Any?>,
+        title: String = "$key configuration",
     ): PluginConfiguration {
         val definition = mock<PluginDefinition> { on { this.key } doReturn key }
         val node = objectMapper.valueToTree<ObjectNode>(properties.filterValues { it != null })
         return mock {
             on { this.id } doReturn PluginConfigurationId.existingId(id)
+            on { this.title } doReturn title
             on { this.pluginDefinition } doReturn definition
             on { this.properties } doReturn node
         }
     }
 
-    fun configurationOf(plugin: NotificatiesApiManualPlugin): PluginConfiguration =
-        pluginConfiguration(
-            plugin.configurationId.id,
-            NotificatiesApiManualPlugin.PLUGIN_KEY,
-            mapOf(
-                "url" to plugin.url.toString(),
-                "callbackUrl" to plugin.callbackUrl?.toString(),
-                "authHeader" to plugin.authHeader,
-                "abonnementRegistration" to plugin.abonnementRegistration.value,
-            ),
-        )
+    /** A stored configuration of this plugin. */
+    fun manualConfiguration(
+        url: String = ON_URL,
+        id: UUID = UUID.randomUUID(),
+    ): PluginConfiguration = pluginConfiguration(id, NotificatiesApiManualPlugin.PLUGIN_KEY, mapOf("url" to url))
 
     fun receiveLink(
         configurationId: UUID?,

@@ -68,10 +68,8 @@ server:
 
 valtimo:
   database: postgres
-  zgw:
-    # The core Notificaties API configuration's callback (localhost:8080) is not reachable from the Open Notificaties
-    # container; on Valtimo 13.41 a failing core registration stops startup. This plugin has its own setting.
-    register-abonnementen: false
+  # No valtimo.zgw.register-abonnementen: false needed. The core Notificaties API configuration has the same URL as the
+  # configuration of this plugin, so core registers nothing in Open Notificaties for it.
   app:
     scheme: http
   oauth:

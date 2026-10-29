@@ -16,49 +16,89 @@
 
 <div [attr.data-test-id]="testIds.panel" class="manual-abonnement">
   <ng-container *ngIf="manualAbonnement; else saveFirst">
+    <h4 class="cds--type-heading-compact-02 manual-abonnement__heading">
+      {{ 'standardPluginTitle' | pluginTranslate: pluginId | async }}
+    </h4>
+
     <cds-inline-notification
-      *ngIf="manualAbonnement.misroutedCallbackAt"
-      [attr.data-test-id]="testIds.misroutedCallback"
+      *ngIf="manualAbonnement.coreConfigurations.length === 0"
+      [attr.data-test-id]="testIds.standardPluginMissing"
       [notificationObj]="{
         type: 'warning',
-        title: ('manualAbonnementMisroutedTitle' | pluginTranslate: pluginId | async),
-        message:
-          ('manualAbonnementMisrouted' | pluginTranslate: pluginId | async) +
-          ' ' +
-          ('manualAbonnementMisroutedAt' | pluginTranslate: pluginId | async) +
-          ' ' +
-          (manualAbonnement.misroutedCallbackAt | date: 'medium'),
+        title: '',
+        message: ('standardPluginMissing' | pluginTranslate: pluginId | async),
         showClose: false,
         lowContrast: true,
       }"
     ></cds-inline-notification>
 
+    <cds-inline-notification
+      *ngIf="manualAbonnement.coreConfigurations.length > 1"
+      [attr.data-test-id]="testIds.standardPluginMultiple"
+      [notificationObj]="{
+        type: 'warning',
+        title: '',
+        message: ('standardPluginMultiple' | pluginTranslate: pluginId | async),
+        showClose: false,
+        lowContrast: true,
+      }"
+    ></cds-inline-notification>
+
+    <ul class="manual-abonnement__configurations">
+      <li *ngFor="let configuration of manualAbonnement.coreConfigurations" [attr.data-test-id]="testIds.standardPlugin">
+        <strong>{{ configuration.title }}</strong>
+
+        <v-paragraph *ngIf="configuration.authHeaderFilledIn; else authHeaderEmpty">
+          {{ 'standardPluginAuthHeaderFilledIn' | pluginTranslate: pluginId | async }}
+        </v-paragraph>
+
+        <ng-template #authHeaderEmpty>
+          <cds-inline-notification
+            [attr.data-test-id]="testIds.standardPluginAuthHeaderEmpty"
+            [notificationObj]="{
+              type: 'warning',
+              title: '',
+              message: ('standardPluginAuthHeaderEmpty' | pluginTranslate: pluginId | async),
+              showClose: false,
+              lowContrast: true,
+            }"
+          ></cds-inline-notification>
+        </ng-template>
+      </li>
+    </ul>
+
+    <h4 class="cds--type-heading-compact-02 manual-abonnement__heading">
+      {{ 'abonnementTitle' | pluginTranslate: pluginId | async }}
+    </h4>
+
     <v-paragraph [margin]="true">
-      {{ 'manualAbonnementDescription' | pluginTranslate: pluginId | async }}
+      {{ 'abonnementDescription' | pluginTranslate: pluginId | async }}
     </v-paragraph>
 
     <dl class="manual-abonnement__list">
       <dt class="cds--type-heading-compact-01">
-        {{ 'callbackUrl' | pluginTranslate: pluginId | async }}
+        {{ 'abonnementCallbackUrl' | pluginTranslate: pluginId | async }}
       </dt>
 
-      <dd *ngIf="manualAbonnement.callbackUrl; else callbackUrlHint" [attr.data-test-id]="testIds.callbackUrl">
-        {{ manualAbonnement.callbackUrl }}
+      <dd *ngIf="callbackUrl; else callbackUrlHint" [attr.data-test-id]="testIds.callbackUrl">
+        {{ callbackUrl }}
       </dd>
 
       <ng-template #callbackUrlHint>
         <dd [attr.data-test-id]="testIds.callbackUrlHint">
-          {{ 'manualAbonnementCallbackUrlHint' | pluginTranslate: pluginId | async }}
+          {{ 'abonnementCallbackUrlHint' | pluginTranslate: pluginId | async }}
         </dd>
       </ng-template>
 
-      <dd [attr.data-test-id]="testIds.callbackUrlWarning">
-        <em>{{ 'manualAbonnementCallbackUrlWarning' | pluginTranslate: pluginId | async }}</em>
-      </dd>
+      <dt class="cds--type-heading-compact-01">
+        {{ 'abonnementAuth' | pluginTranslate: pluginId | async }}
+      </dt>
+
+      <dd>{{ 'abonnementAuthValue' | pluginTranslate: pluginId | async }}</dd>
 
       <ng-container *ngFor="let kanaal of manualAbonnement.kanalen">
         <dt class="cds--type-heading-compact-01">
-          {{ 'manualAbonnementKanaal' | pluginTranslate: pluginId | async }}
+          {{ 'abonnementKanaal' | pluginTranslate: pluginId | async }}
         </dt>
 
         <dd [attr.data-test-id]="testIds.kanaal">
@@ -74,13 +114,13 @@
     </dl>
 
     <v-paragraph *ngIf="manualAbonnement.kanalen.length === 0" [italic]="true">
-      {{ 'manualAbonnementNoKanalen' | pluginTranslate: pluginId | async }}
+      {{ 'abonnementNoKanalen' | pluginTranslate: pluginId | async }}
     </v-paragraph>
   </ng-container>
 
   <ng-template #saveFirst>
     <v-paragraph [italic]="true">
-      {{ 'manualAbonnementSaveFirst' | pluginTranslate: pluginId | async }}
+      {{ 'saveFirst' | pluginTranslate: pluginId | async }}
     </v-paragraph>
   </ng-template>
 </div>

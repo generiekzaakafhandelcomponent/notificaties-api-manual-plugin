@@ -17,6 +17,14 @@
 .manual-abonnement {
   margin-top: var(--cds-spacing-05);
 
+  &__heading {
+    margin: var(--cds-spacing-05) 0 var(--cds-spacing-03);
+  }
+
+  &__configurations {
+    margin-bottom: var(--cds-spacing-03);
+  }
+
   &__list {
     dt {
       margin-top: var(--cds-spacing-03);

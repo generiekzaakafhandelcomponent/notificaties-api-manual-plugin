@@ -1,0 +1,7 @@
+[
+    {
+        "processDefinitionKey": "verzoek-behandelen",
+        "canInitializeDocument": false,
+        "startableByUser": false
+    }
+]

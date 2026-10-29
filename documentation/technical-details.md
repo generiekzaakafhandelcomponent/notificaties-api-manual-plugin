@@ -1,11 +1,12 @@
 # Installation and technical details
 
 This page is meant for developers and operators. For configuring the plugin in the user interface, see
-[Notificaties API (manual abonnement)](plugin.md).
+[Notificaties API, manual abonnement](plugin.md).
 
-The plugin has its own plugin key (`notificatiesapi-manual`), callback addresses and database tables. Installing it
-changes nothing for the standard Notificaties API plugin: it only reads the `Authorization` header of notificaties on
-the address of the standard plugin, to [warn about misrouted notificaties](#callback).
+The plugin has its own plugin key (`notificatiesapi-manual`) and one property, the Open Notificaties URL. It has no
+callback address, process actions or database tables: notificaties arrive on the callback address of the standard
+Notificaties API plugin. What it changes is what the standard plugin does in Open Notificaties for that URL; see
+[How it works](#how-it-works).
 
 ---
 
@@ -15,7 +16,7 @@ the address of the standard plugin, to [warn about misrouted notificaties](#call
 
 ```kotlin
 dependencies {
-    implementation("com.ritense.valtimoplugins:notificaties-api-manual:1.0.1")
+    implementation("com.ritense.valtimoplugins:notificaties-api-manual:2.0.0")
 }
 ```
 
@@ -24,7 +25,7 @@ dependencies {
 ```json
 {
   "dependencies": {
-    "@valtimo-plugins/notificaties-api-manual": "1.0.1"
+    "@valtimo-plugins/notificaties-api-manual": "2.0.0"
   }
 }
 ```
@@ -53,103 +54,89 @@ import {
 })
 ```
 
-The plugin creates its own tables (`notificaties_api_manual_abonnement_link` and
-`notificaties_api_manual_misrouted_callback`) when the application starts.
+No application property is needed. Don't set `valtimo.zgw.register-abonnementen: false` for this plugin: the standard
+plugin keeps registering abonnementen in other Open Notificaties URLs.
 
 ---
 
-## Application properties
+## How it works
 
-### Standard plugin
+The standard plugin registers an abonnement per Open Notificaties URL of its configurations, when the application has
+started and when a configuration or plugin process link changes. The plugin wraps the `NotificatiesApiClient` bean
+(with a bean post-processor, so a client that the application defines itself is wrapped too). For an Open Notificaties
+URL of a configuration of this plugin (compared without trailing `/`), the wrapper:
 
-If the standard Notificaties API plugin has a configuration whose callback address is only reachable through the
-gateway, its own automatic registration fails too. Turn it off:
+- returns no abonnementen and no kanalen, so the standard plugin deletes and reads nothing;
+- creates no kanalen, and creates, changes and deletes no abonnement. A created abonnement is returned with the URL
+  `<Open Notificaties URL>/abonnement/registered-manually` and the key the standard plugin chose. No such abonnement
+  exists in Open Notificaties.
 
-```yaml
-valtimo:
-  zgw:
-    register-abonnementen: false
-```
+The standard plugin stores that URL and key in `notificaties_api_abonnement_link`. Its callback
+(`/api/v1/notificatiesapi/callback`) accepts every notificatie that carries a key from that table, so it accepts the
+notificaties of the abonnement the administrator created, as long as its **Auth** is the **Authentication header** of
+the configuration of the standard plugin. Without an Authentication header, the standard plugin picks a random key that
+the administrator can't see.
+
+The standard plugin stores one link per Open Notificaties URL, for one of its configurations on that URL. With more
+than one configuration of the standard plugin on the URL, only the Authentication header of that one is accepted; the
+form of this plugin warns about it.
+
+Publishing notificaties, and every call for other URLs, go to the client unchanged.
+
+The form of a configuration of this plugin calls `GET /api/management/v1/notificatiesapi-manual/configurations/{id}/manual-abonnement`
+(admins only). It returns the configurations of the standard plugin on the same URL (without the value of their
+Authentication header), and the kanalen with filters of their **Receive a notification** process links and of other
+`NotificatiesApiListener` plugins linked to them, such as Verzoek and Portaaltaak.
+
+### Order of configuration
+
+The standard plugin registers when one of its configurations is saved. If no configuration of this plugin has that URL
+yet, the wrapper passes the registration on and it fails behind the gateway.
 
 {% hint style="danger" %}
-On Valtimo `13.41.0` up to `13.41.0-4` and on `13.42.x`, this setting is **required** in that situation: a failing
-registration of the standard plugin stops the application from starting. From `13.41.0-5` and `13.43.0` the
-application keeps running, but keeps retrying for a while and logs errors.
+On Valtimo `13.41.0` up to `13.41.0-4` and on `13.42.x`, a failing registration of the standard plugin also stops the
+application from starting. Deploy configurations of this plugin (`.pluginconfig.json`) no later than those of the
+standard plugin, or in the same deployment.
 {% endhint %}
-
-The setting applies to all configurations of the standard plugin. It does not affect this plugin.
-
-### This plugin
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `valtimo.notificaties-api-manual.register-abonnementen` | `true` | `false` turns off the automatic registration of this plugin's configurations. Manual configurations never register anything. |
-| `valtimo.notificaties-api-manual.abonnement-registration.initial-backoff` | `2s` | First wait before retrying the registration at startup. |
-| `valtimo.notificaties-api-manual.abonnement-registration.max-backoff` | `30s` | Longest wait between retries. |
-| `valtimo.notificaties-api-manual.abonnement-registration.max-duration` | `15m` | After this time the startup registration stops retrying. |
-
----
-
-## Configuration rules
-
-A configuration is refused when:
-
-- the shared secret starts with `Bearer` (in any case), starts or ends with a space, contains characters other than
-  printable ASCII, or is longer than 255 characters;
-- an **Automatic** configuration has no callback URL;
-- the callback URL ends in `/api/v1/notificatiesapi/callback` (the address of the standard plugin), or is the callback
-  URL of a configuration of the standard plugin.
-
-The form removes spaces around the secret and stops at 255 characters; the other rules are checked when saving.
-
-{% hint style="warning" %}
-These rules also apply to configurations in a `.pluginconfig.json` file. A file that breaks one of them stops the
-application from starting.
-{% endhint %}
-
----
-
-## Callback
-
-Valtimo accepts a notificatie on the callback address of this plugin (`/api/v1/notificatiesapi-manual/callback`) when
-it carries the shared secret of a **Manual** configuration, or the secret of an abonnement that Valtimo registered for
-an **Automatic** configuration of this plugin. Other notificaties are answered with `401`, or `403` without a secret,
-and not processed.
-
-Valtimo also looks at the `Authorization` header of every notificatie on the address of the standard plugin
-(`/api/v1/notificatiesapi/callback`). When it is the shared secret of a **Manual** configuration and not a secret of
-the standard plugin, Valtimo logs a warning and stores the time per configuration in the table
-`notificaties_api_manual_misrouted_callback`. The form of that configuration then shows a warning. The standard plugin
-still answers the notificatie itself (`401`, or `204` for the test notificatie). The stored time is removed when a
-notificatie with that secret arrives on the address of this plugin. Times of configurations that were deleted or are no
-longer **Manual** are removed with the next notificatie that this plugin accepts.
-
-Accepted notificaties go into the same queue as those of the standard plugin, so all existing consumers receive them. A
-notificatie that arrives through both plugins is processed once; when both deliver it at the same moment, one delivery
-may first be answered with an error. Open Notificaties retries it, and it is then ignored.
 
 ---
 
 ## Process variables
 
-**Receive a notification** sets these variables on the process: `notificatieKanaal`, `notificatieResourceUrl`,
-`notificatieActie`, `notificatieKenmerken`, `notificatieHoofdObject` and `notificatieAanmaakdatum`.
+**Receive a notification** of the standard plugin sets these variables on the process: `notificatieKanaal`,
+`notificatieResourceUrl`, `notificatieActie`, `notificatieKenmerken`, `notificatieHoofdObject` and
+`notificatieAanmaakdatum`.
 
 ---
 
-## Automatic registration
+## Upgrading from 1.0.x
 
-- Registration runs in the background after saving. If Open Notificaties can't reach the callback URL, the
-  registration fails and the application log says so.
-- One abonnement is registered per Open Notificaties URL. Only the secret of the configuration that holds it is used.
-- Valtimo deletes abonnementen with its callback URL that it didn't register itself, as the standard plugin does. It
-  skips this when a **Manual** configuration uses the same Open Notificaties URL or callback URL, or has no callback
-  URL, because an administrator's abonnement can't be told apart from a leftover one; remove leftovers in Open
-  Notificaties then.
-- Start one instance of the application first when several start at the same time with a new **Automatic**
-  configuration.
-- Process links copied with a BPMN-only redeployment reach the abonnement at the next change or restart.
-- When Valtimo cannot remove an automatically registered abonnement, it logs its address; remove it in Open
-  Notificaties.
-- When a configuration is switched to **Manual** without an **Authentication header**, Valtimo doesn't show the old
-  abonnement's secret, so its notificaties are refused (`401`) until the abonnement is removed.
+Version 2.0.0 no longer has its own callback, shared secret, **Automatic** registration or process actions. A
+**Manual** configuration keeps its URL and becomes a configuration of 2.0.0. Plan the upgrade at a quiet moment:
+notificaties that arrive between the upgrade and the last step are refused, and lost when Open Notificaties stops
+retrying.
+
+{% stepper %}
+{% step %}
+Delete configurations of this plugin with **Automatic** registration. After the upgrade they would stop the standard
+plugin from registering on their URL.
+{% endstep %}
+{% step %}
+Upgrade. The tables `notificaties_api_manual_abonnement_link` and `notificaties_api_manual_misrouted_callback` are
+dropped. Open and save each configuration of this plugin once: Valtimo logs an error for the properties it no longer
+knows (`Ignoring unknown property ...`) until then.
+{% endstep %}
+{% step %}
+For each configuration of this plugin, create a configuration of the standard plugin with the same URL, and with the
+old shared secret as **Authentication header**. Not before the upgrade: 1.0.x doesn't stop the standard plugin from
+registering.
+{% endstep %}
+{% step %}
+Link the **Publish a notification** and **Receive a notification** process links of this plugin to that configuration,
+and check that processes waiting for a notificatie are linked to it too
+{% endstep %}
+{% step %}
+In Open Notificaties, change the callback URL of the abonnement to the address of the standard plugin
+(`/api/v1/notificatiesapi/callback`), and route that address through the gateway
+{% endstep %}
+{% endstepper %}

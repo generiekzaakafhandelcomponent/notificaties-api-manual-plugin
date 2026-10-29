@@ -15,19 +15,18 @@
  */
 
 export const NOTIFICATIES_API_MANUAL_PLUGIN_CONFIGURATION_TEST_IDS = {
+  order: 'notificatiesApiManualPluginOrder',
   configurationTitle: 'notificatiesApiManualPluginConfigurationTitle',
   url: 'notificatiesApiManualPluginUrl',
-  callbackUrl: 'notificatiesApiManualPluginCallbackUrl',
-  authenticationPluginConfiguration: 'notificatiesApiManualPluginAuthenticationPluginConfiguration',
-  abonnementRegistration: 'notificatiesApiManualPluginAbonnementRegistration',
-  authHeader: 'notificatiesApiManualPluginAuthHeader',
 } as const;
 
 export const NOTIFICATIES_API_MANUAL_PLUGIN_MANUAL_ABONNEMENT_TEST_IDS = {
   panel: 'notificatiesApiManualPluginManualAbonnement',
+  standardPlugin: 'notificatiesApiManualPluginStandardPlugin',
+  standardPluginMissing: 'notificatiesApiManualPluginStandardPluginMissing',
+  standardPluginMultiple: 'notificatiesApiManualPluginStandardPluginMultiple',
+  standardPluginAuthHeaderEmpty: 'notificatiesApiManualPluginStandardPluginAuthHeaderEmpty',
   callbackUrl: 'notificatiesApiManualPluginManualAbonnementCallbackUrl',
   callbackUrlHint: 'notificatiesApiManualPluginManualAbonnementCallbackUrlHint',
-  callbackUrlWarning: 'notificatiesApiManualPluginManualAbonnementCallbackUrlWarning',
-  misroutedCallback: 'notificatiesApiManualPluginManualAbonnementMisroutedCallback',
   kanaal: 'notificatiesApiManualPluginManualAbonnementKanaal',
 } as const;

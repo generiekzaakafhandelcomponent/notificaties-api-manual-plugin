@@ -14,209 +14,118 @@
  * limitations under the License.
  */
 
-import {
-  notificatiesApiPluginSpecification,
-  PluginSpecification,
-  PublishNotificatieConfigurationComponent,
-  ReceiveNotificatieConfigurationComponent,
-} from '@valtimo/plugin';
+import {notificatiesApiPluginSpecification, PluginSpecification} from '@valtimo/plugin';
 import {NotificatiesApiManualPluginConfigurationComponent} from './components/notificaties-api-manual-plugin-configuration/notificaties-api-manual-plugin-configuration.component';
 
 const notificatiesApiManualPluginSpecification: PluginSpecification = {
   pluginId: 'notificatiesapi-manual',
   pluginConfigurationComponent: NotificatiesApiManualPluginConfigurationComponent,
   pluginLogoBase64: notificatiesApiPluginSpecification.pluginLogoBase64,
-  functionConfigurationComponents: {
-    'publish-notificatie': PublishNotificatieConfigurationComponent,
-    'receive-notificatie': ReceiveNotificatieConfigurationComponent,
-  },
   pluginTranslations: {
     nl: {
-      title: 'Notificaties API (handmatig abonnement)',
-      url: 'Notificaties API URL',
-      urlTooltip: 'Een URL naar de REST API van Notificaties',
-      callbackUrl: 'Callback URL',
-      callbackUrlTooltip:
-        'Het GZAC API-endpoint waar notificaties naartoe moeten worden gestuurd: .../api/v1/notificatiesapi-manual/callback',
-      callbackUrlManualTooltip:
-        'Optioneel. Het adres dat in het abonnement in Open Notificaties staat, ter informatie: GZAC gebruikt het niet zelf. Gebruik niet het adres van de standaard Notificaties API-plugin (.../api/v1/notificatiesapi/callback): dat weigert de notificaties van deze plug-in.',
-      description: 'Notificaties API met een abonnement dat GZAC zelf registreert of dat een beheerder aanmaakt.',
+      title: 'Notificaties API, handmatig abonnement',
+      description:
+        'Open Notificaties waarin een beheerder het abonnement van de Notificaties API-plugin aanmaakt, bijvoorbeeld achter een gateway met certificaten.',
       configurationTitle: 'Configuratienaam',
       configurationTitleTooltip:
         'De naam van de huidige plugin-configuratie. Onder deze naam kan de configuratie in de rest van de applicatie teruggevonden worden.',
-      authenticationPluginConfiguration: 'Configuratie authenticatie-plug-in',
-      authHeader: 'Authenticatie header',
-      authHeaderTooltip:
-        'Secret van de authenticatie header voor de callback URL. Als niet ingevuld blijft de sleutel van het bestaande abonnement in gebruik, of wordt een random secret gegenereerd. Een wijziging wordt bij het opslaan naar het abonnement gestuurd.',
-      abonnementRegistration: 'Registratie abonnement',
-      abonnementRegistrationTooltip:
-        'Automatisch: GZAC registreert het abonnement in Open Notificaties. Handmatig: een beheerder maakt het abonnement aan in Open Notificaties, bijvoorbeeld omdat het verkeer via een gateway met certificaten loopt.',
-      abonnementRegistrationAutomatic: 'Automatisch',
-      abonnementRegistrationManual: 'Handmatig',
-      sharedSecret: 'Gedeeld geheim',
-      sharedSecretTooltip:
-        'Vul hetzelfde geheim in bij het veld Auth van het abonnement in Open Notificaties. GZAC accepteert alleen notificaties met een geheim van deze plug-in. Gebruik een gewone waarde die niet met "Bearer" begint.',
-      manualAbonnementDescription:
-        'Het abonnement in Open Notificaties moet deze callback URL en deze kanalen met filters bevatten. Ook de kanalen van Notificaties API-koppelingen van de standaard Notificaties API-plugin (zoals Verzoek en Portaaltaak) met dezelfde Open Notificaties URL staan erbij.',
-      manualAbonnementCallbackUrlHint:
-        'Het adres waarlangs Open Notificaties GZAC bereikt, gevolgd door /api/v1/notificatiesapi-manual/callback',
-      manualAbonnementCallbackUrlWarning:
-        'Niet /api/v1/notificatiesapi/callback, en een gateway moet ook naar /api/v1/notificatiesapi-manual/callback doorsturen. Het adres van de standaard Notificaties API-plugin weigert de notificaties van deze plug-in, ook al lukt het aanmaken van het abonnement.',
-      manualAbonnementMisroutedTitle: 'Notificaties komen binnen op het verkeerde adres',
-      manualAbonnementMisrouted:
-        'GZAC kreeg een notificatie met het geheim van deze configuratie op het adres van de standaard Notificaties API-plugin (/api/v1/notificatiesapi/callback). Dat adres weigert hem, dus hij wordt niet verwerkt. Wijzig de callback URL van het abonnement in Open Notificaties, of de route in de gateway, naar .../api/v1/notificatiesapi-manual/callback. Deze melding verdwijnt zodra er een notificatie op het juiste adres binnenkomt.',
-      manualAbonnementMisroutedAt: 'Laatst ontvangen:',
-      manualAbonnementKanaal: 'Kanaal',
-      manualAbonnementNoKanalen: 'Er zijn nog geen kanalen nodig voor deze configuratie.',
-      manualAbonnementSaveFirst:
-        'Sla de configuratie op met handmatige registratie om te zien welke kanalen en filters het abonnement moet bevatten.',
-      'publish-notificatie': 'Publiceer een notificatie',
-      kanaal: 'Kanaal',
-      kanaalTooltip: 'Het kanaal waarop de notificatie gepubliceerd wordt (max 50 tekens).',
-      hoofdObject: 'Hoofd-object URL',
-      hoofdObjectTooltip: 'URL-referentie naar het hoofd-object van de publicerende API.',
-      resource: 'Resource',
-      resourceTooltip: 'De resourcenaam waar de notificatie betrekking op heeft (max 100 tekens).',
-      resourceUrl: 'Resource URL',
-      resourceUrlTooltip: 'URL-referentie naar de resource in de publicerende API.',
-      actie: 'Actie',
-      actieTooltip: 'De actie die door de publicerende API is uitgevoerd (max 100 tekens).',
-      aanmaakdatum: 'Aanmaakdatum',
-      aanmaakdatumTooltip:
-        'Tijdstip waarop de actie heeft plaatsgevonden (ISO 8601 formaat, bijv. 2024-01-15T10:30:00). Indien leeg wordt het huidige tijdstip gebruikt.',
-      kenmerken: 'Kenmerken',
-      kenmerkenTooltip: 'Sleutel-waardeparen voor het filteren van notificaties.',
-      kenmerkenKey: 'Kenmerk',
-      kenmerkenValue: 'Waarde',
-      kenmerkenAddRow: 'Kenmerk toevoegen',
-      kenmerkenDeleteRow: 'Kenmerk verwijderen',
-      'receive-notificatie': 'Ontvang een notificatie',
-      receiveNotificatieDescription:
-        'Configureer de filtercriteria voor binnenkomende notificaties. Alle velden zijn optioneel — lege velden matchen alle waarden.',
-      receiveKanaalTooltip: 'Filter op kanaal. Indien leeg worden alle kanalen gematcht.',
-      receiveActieTooltip: 'Filter op actie. Indien leeg worden alle acties gematcht.',
-      receiveKenmerkenTooltip:
-        'Filter op kenmerken. Alleen notificaties die alle opgegeven kenmerken bevatten worden gematcht.',
+      url: 'Notificaties API URL',
+      urlTooltip:
+        'De URL van de REST API van Open Notificaties, precies zoals in de configuratie van de standaard Notificaties API-plugin.',
+      orderTitle: 'Stap 1 van 2. Configureer hierna de standaard Notificaties API-plugin',
+      orderMessage:
+        'Deze configuratie vertelt GZAC alleen dat een beheerder het abonnement in deze Open Notificaties aanmaakt. Sla haar eerst op. Maak daarna een configuratie van de standaard Notificaties API-plugin met precies dezelfde Notificaties API URL, en vul daar de Authenticatie header in: dat is het geheim van het abonnement. Koppel Verzoek, Portaaltaak en proceskoppelingen aan die configuratie. In de andere volgorde probeert GZAC het abonnement zelf te registreren, wat achter een gateway met certificaten mislukt.',
+      standardPluginTitle: 'Stap 2. Standaard Notificaties API-plugin',
+      standardPluginMissing:
+        'Nog geen configuratie van de standaard Notificaties API-plugin gebruikt deze URL. Maak die nu aan, met dezelfde Notificaties API URL en een Authenticatie header.',
+      standardPluginMultiple:
+        'Meer dan één configuratie van de standaard Notificaties API-plugin gebruikt deze URL. GZAC accepteert de Authenticatie header van maar één ervan: gebruik één configuratie.',
+      standardPluginAuthHeaderFilledIn: 'Authenticatie header ingevuld',
+      standardPluginAuthHeaderEmpty:
+        'De Authenticatie header is leeg. Vul die in: anders kiest GZAC zelf een geheim dat u niet kunt zien, en weigert het de notificaties.',
+      abonnementTitle: 'Abonnement in Open Notificaties',
+      abonnementDescription:
+        'Maak in Open Notificaties een abonnement aan met deze gegevens. GZAC ontvangt de notificaties op het adres van de standaard Notificaties API-plugin.',
+      abonnementCallbackUrl: 'Callback URL',
+      abonnementCallbackUrlHint:
+        'De callback URL van de standaard configuratie: het adres waarlangs Open Notificaties GZAC bereikt, gevolgd door /api/v1/notificatiesapi/callback',
+      abonnementAuth: 'Auth',
+      abonnementAuthValue: 'De Authenticatie header van de standaard configuratie',
+      abonnementKanaal: 'Kanaal',
+      abonnementNoKanalen:
+        'Er zijn nog geen kanalen nodig: er zijn geen proceskoppelingen, Verzoek- of Portaaltaak-configuraties die deze URL gebruiken.',
+      saveFirst:
+        'Sla deze configuratie op om te zien welke configuratie van de standaard plugin en welk abonnement nog nodig zijn.',
     },
     en: {
-      title: 'Notificaties API (manual abonnement)',
-      url: 'Notificaties API URL',
-      urlTooltip: 'A URL to the REST API of Notificaties',
-      callbackUrl: 'Callback URL',
-      callbackUrlTooltip:
-        'The GZAC API-endpoint where notifications should be sent: .../api/v1/notificatiesapi-manual/callback',
-      callbackUrlManualTooltip:
-        'Optional. The address entered in the abonnement in Open Notificaties, for reference: GZAC does not use it itself. Do not use the address of the standard Notificaties API plugin (.../api/v1/notificatiesapi/callback): it refuses the notifications of this plugin.',
-      description: 'Notificaties API with an abonnement that GZAC registers itself or that an administrator creates.',
+      title: 'Notificaties API, manual abonnement',
+      description:
+        'Open Notificaties in which an administrator creates the abonnement of the Notificaties API plugin, for example behind a gateway that checks certificates.',
       configurationTitle: 'Configuration name',
       configurationTitleTooltip:
         'The name of the current plugin configuration. Under this name, the configuration can be found in the rest of the application.',
-      authenticationPluginConfiguration: 'Authentication plugin configuration',
-      authHeader: 'Authentication header',
-      authHeaderTooltip:
-        'Secret value in Authentication header for the callback URL. When omitting this field, the key of the existing abonnement stays in use, or a random secret is generated. A change is sent to the abonnement when saving.',
-      abonnementRegistration: 'Abonnement registration',
-      abonnementRegistrationTooltip:
-        'Automatic: GZAC registers the abonnement in Open Notificaties. Manual: an administrator creates the abonnement in Open Notificaties, for example because traffic goes through a gateway that checks certificates.',
-      abonnementRegistrationAutomatic: 'Automatic',
-      abonnementRegistrationManual: 'Manual',
-      sharedSecret: 'Shared secret',
-      sharedSecretTooltip:
-        'Enter the same secret in the Auth field of the abonnement in Open Notificaties. GZAC only accepts notifications that carry a secret of this plugin. Use a plain value that does not start with "Bearer".',
-      manualAbonnementDescription:
-        'The abonnement in Open Notificaties must contain this callback URL and these channels with their filters. The channels of links to the standard Notificaties API plugin (such as Verzoek and Portaaltaak) with the same Open Notificaties URL are included.',
-      manualAbonnementCallbackUrlHint:
-        'The address through which Open Notificaties reaches GZAC, followed by /api/v1/notificatiesapi-manual/callback',
-      manualAbonnementCallbackUrlWarning:
-        'Not /api/v1/notificatiesapi/callback, and a gateway must also forward to /api/v1/notificatiesapi-manual/callback. The address of the standard Notificaties API plugin refuses the notifications of this plugin, even though creating the abonnement succeeds.',
-      manualAbonnementMisroutedTitle: 'Notifications arrive at the wrong address',
-      manualAbonnementMisrouted:
-        'GZAC received a notification with the secret of this configuration at the address of the standard Notificaties API plugin (/api/v1/notificatiesapi/callback). That address refuses it, so it is not processed. Change the callback URL of the abonnement in Open Notificaties, or the route in the gateway, to .../api/v1/notificatiesapi-manual/callback. This message disappears as soon as a notification arrives at the right address.',
-      manualAbonnementMisroutedAt: 'Last received:',
-      manualAbonnementKanaal: 'Channel',
-      manualAbonnementNoKanalen: 'No channels are needed for this configuration yet.',
-      manualAbonnementSaveFirst:
-        'Save the configuration with manual registration to see which channels and filters the abonnement must contain.',
-      'publish-notificatie': 'Publish a notification',
-      kanaal: 'Channel',
-      kanaalTooltip: 'The channel on which the notification is published (max 50 characters).',
-      hoofdObject: 'Main object URL',
-      hoofdObjectTooltip: 'URL reference to the main object of the publishing API.',
-      resource: 'Resource',
-      resourceTooltip: 'The resource name the notification concerns (max 100 characters).',
-      resourceUrl: 'Resource URL',
-      resourceUrlTooltip: 'URL reference to the resource in the publishing API.',
-      actie: 'Action',
-      actieTooltip: 'The action performed by the publishing API (max 100 characters).',
-      aanmaakdatum: 'Creation date',
-      aanmaakdatumTooltip:
-        'Timestamp when the action occurred (ISO 8601 format, e.g. 2026-01-15T10:30:00). If empty, the current time is used.',
-      kenmerken: 'Attributes',
-      kenmerkenTooltip: 'Key-value pairs for notification filtering.',
-      kenmerkenKey: 'Attribute',
-      kenmerkenValue: 'Value',
-      kenmerkenAddRow: 'Add attribute',
-      kenmerkenDeleteRow: 'Delete attribute',
-      'receive-notificatie': 'Receive a notification',
-      receiveNotificatieDescription:
-        'Configure the filter criteria for incoming notifications. All fields are optional — empty fields match all values.',
-      receiveKanaalTooltip: 'Filter by channel. If empty, all channels are matched.',
-      receiveActieTooltip: 'Filter by action. If empty, all actions are matched.',
-      receiveKenmerkenTooltip:
-        'Filter by attributes. Only notifications containing all specified attributes are matched.',
+      url: 'Notificaties API URL',
+      urlTooltip:
+        'The URL of the REST API of Open Notificaties, exactly as in the configuration of the standard Notificaties API plugin.',
+      orderTitle: 'Step 1 of 2. Configure the standard Notificaties API plugin after this',
+      orderMessage:
+        'This configuration only tells GZAC that an administrator creates the abonnement in this Open Notificaties. Save it first. Then create a configuration of the standard Notificaties API plugin with exactly the same Notificaties API URL, and fill in its Authentication header: that is the secret of the abonnement. Link Verzoek, Portaaltaak and process links to that configuration. In the other order, GZAC tries to register the abonnement itself, which fails behind a gateway that checks certificates.',
+      standardPluginTitle: 'Step 2. Standard Notificaties API plugin',
+      standardPluginMissing:
+        'No configuration of the standard Notificaties API plugin uses this URL yet. Create one now, with the same Notificaties API URL and an Authentication header.',
+      standardPluginMultiple:
+        'More than one configuration of the standard Notificaties API plugin uses this URL. GZAC accepts the Authentication header of only one of them: use one configuration.',
+      standardPluginAuthHeaderFilledIn: 'Authentication header filled in',
+      standardPluginAuthHeaderEmpty:
+        'The Authentication header is empty. Fill it in: otherwise GZAC picks a secret you cannot see, and refuses the notifications.',
+      abonnementTitle: 'Abonnement in Open Notificaties',
+      abonnementDescription:
+        'Create an abonnement in Open Notificaties with these details. GZAC receives the notifications on the address of the standard Notificaties API plugin.',
+      abonnementCallbackUrl: 'Callback URL',
+      abonnementCallbackUrlHint:
+        'The callback URL of the standard configuration: the address through which Open Notificaties reaches GZAC, followed by /api/v1/notificatiesapi/callback',
+      abonnementAuth: 'Auth',
+      abonnementAuthValue: 'The Authentication header of the standard configuration',
+      abonnementKanaal: 'Channel',
+      abonnementNoKanalen:
+        'No channels are needed yet: no process links, Verzoek or Portaaltaak configurations use this URL.',
+      saveFirst:
+        'Save this configuration to see which configuration of the standard plugin and which abonnement are still needed.',
     },
     de: {
-      title: 'Notificaties API (manuelles Abonnement)',
-      url: 'Notificaties API URL',
-      urlTooltip: 'Die URL zur REST API von Notificaties',
-      callbackUrl: 'Callback URL',
-      callbackUrlTooltip: 'Der GZAC API-Endpunkt, an den Benachrichtigungen gesendet werden: .../api/v1/notificatiesapi-manual/callback',
-      callbackUrlManualTooltip: 'Optional. Die Adresse, die im Abonnement in Open Notificaties steht, zur Information: GZAC verwendet sie nicht selbst. Verwenden Sie nicht die Adresse des Standard-Plugins Notificaties API (.../api/v1/notificatiesapi/callback): Sie lehnt die Benachrichtigungen dieses Plugins ab.',
-      description: 'Notificaties API mit einem Abonnement, das GZAC selbst registriert oder das ein Administrator anlegt.',
+      title: 'Notificaties API, manuelles Abonnement',
+      description:
+        'Open Notificaties, in dem ein Administrator das Abonnement des Notificaties API-Plugins anlegt, zum Beispiel hinter einem Gateway mit Zertifikatsprüfung.',
       configurationTitle: 'Konfigurationsname',
-      configurationTitleTooltip: 'Der Name der aktuellen Plugin-Konfiguration. Unter diesem Namen ist die Konfiguration im Rest der Anwendung zu finden.',
-      authenticationPluginConfiguration: 'Konfiguration des Authentifizierungs-Plugins',
-      authHeader: 'Authentifizierungs-Header',
-      authHeaderTooltip: 'Geheimer Wert im Authentifizierungs-Header für die Callback URL. Ohne Angabe bleibt der Schlüssel des bestehenden Abonnements in Gebrauch oder es wird ein zufälliger Wert erzeugt. Eine Änderung wird beim Speichern an das Abonnement gesendet.',
-      abonnementRegistration: 'Registrierung des Abonnements',
-      abonnementRegistrationTooltip: 'Automatisch: GZAC registriert das Abonnement in Open Notificaties. Manuell: ein Administrator legt das Abonnement in Open Notificaties an, zum Beispiel weil der Verkehr über ein Gateway mit Zertifikatsprüfung läuft.',
-      abonnementRegistrationAutomatic: 'Automatisch',
-      abonnementRegistrationManual: 'Manuell',
-      sharedSecret: 'Gemeinsames Geheimnis',
-      sharedSecretTooltip: 'Geben Sie dasselbe Geheimnis im Feld Auth des Abonnements in Open Notificaties ein. GZAC akzeptiert nur Benachrichtigungen mit einem Geheimnis dieses Plugins. Verwenden Sie einen einfachen Wert, der nicht mit "Bearer" beginnt.',
-      manualAbonnementDescription: 'Das Abonnement in Open Notificaties muss diese Callback URL und diese Kanäle mit ihren Filtern enthalten. Die Kanäle von Verknüpfungen mit dem Standard-Plugin Notificaties API (wie Verzoek und Portaaltaak) mit derselben Open Notificaties URL sind enthalten.',
-      manualAbonnementCallbackUrlHint: 'Die Adresse, über die Open Notificaties GZAC erreicht, gefolgt von /api/v1/notificatiesapi-manual/callback',
-      manualAbonnementCallbackUrlWarning: 'Nicht /api/v1/notificatiesapi/callback, und ein Gateway muss ebenfalls an /api/v1/notificatiesapi-manual/callback weiterleiten. Die Adresse des Standard-Plugins Notificaties API lehnt die Benachrichtigungen dieses Plugins ab, auch wenn das Anlegen des Abonnements gelingt.',
-      manualAbonnementMisroutedTitle: 'Benachrichtigungen kommen an der falschen Adresse an',
-      manualAbonnementMisrouted: 'GZAC hat eine Benachrichtigung mit dem Geheimnis dieser Konfiguration an der Adresse des Standard-Plugins Notificaties API (/api/v1/notificatiesapi/callback) erhalten. Diese Adresse lehnt sie ab, daher wird sie nicht verarbeitet. Ändern Sie die Callback URL des Abonnements in Open Notificaties oder die Route im Gateway in .../api/v1/notificatiesapi-manual/callback. Diese Meldung verschwindet, sobald eine Benachrichtigung an der richtigen Adresse ankommt.',
-      manualAbonnementMisroutedAt: 'Zuletzt empfangen:',
-      manualAbonnementKanaal: 'Kanal',
-      manualAbonnementNoKanalen: 'Für diese Konfiguration werden noch keine Kanäle benötigt.',
-      manualAbonnementSaveFirst: 'Speichern Sie die Konfiguration mit manueller Registrierung, um zu sehen, welche Kanäle und Filter das Abonnement enthalten muss.',
-      'publish-notificatie': 'Eine Benachrichtigung veröffentlichen',
-      kanaal: 'Kanal',
-      kanaalTooltip: 'Der Kanal, auf dem die Benachrichtigung veröffentlicht wird (max. 50 Zeichen).',
-      hoofdObject: 'URL des Hauptobjekts',
-      hoofdObjectTooltip: 'URL-Referenz auf das Hauptobjekt der veröffentlichenden API.',
-      resource: 'Ressource',
-      resourceTooltip: 'Der Name der Ressource, auf die sich die Benachrichtigung bezieht (max. 100 Zeichen).',
-      resourceUrl: 'Ressourcen-URL',
-      resourceUrlTooltip: 'URL-Referenz auf die Ressource in der veröffentlichenden API.',
-      actie: 'Aktion',
-      actieTooltip: 'Die Aktion, die die veröffentlichende API ausgeführt hat (max. 100 Zeichen).',
-      aanmaakdatum: 'Erstellungsdatum',
-      aanmaakdatumTooltip: 'Zeitpunkt der Aktion (ISO-8601-Format, z. B. 2026-01-15T10:30:00). Ohne Angabe wird der aktuelle Zeitpunkt verwendet.',
-      kenmerken: 'Merkmale',
-      kenmerkenTooltip: 'Schlüssel-Wert-Paare zum Filtern von Benachrichtigungen.',
-      kenmerkenKey: 'Merkmal',
-      kenmerkenValue: 'Wert',
-      kenmerkenAddRow: 'Merkmal hinzufügen',
-      kenmerkenDeleteRow: 'Merkmal löschen',
-      'receive-notificatie': 'Eine Benachrichtigung empfangen',
-      receiveNotificatieDescription: 'Konfigurieren Sie die Filterkriterien für eingehende Benachrichtigungen. Alle Felder sind optional; leere Felder passen auf alle Werte.',
-      receiveKanaalTooltip: 'Nach Kanal filtern. Ohne Angabe passen alle Kanäle.',
-      receiveActieTooltip: 'Nach Aktion filtern. Ohne Angabe passen alle Aktionen.',
-      receiveKenmerkenTooltip: 'Nach Merkmalen filtern. Nur Benachrichtigungen mit allen angegebenen Merkmalen passen.',
+      configurationTitleTooltip:
+        'Der Name der aktuellen Plugin-Konfiguration. Unter diesem Namen ist die Konfiguration im Rest der Anwendung zu finden.',
+      url: 'Notificaties API URL',
+      urlTooltip:
+        'Die URL der REST API von Open Notificaties, genau wie in der Konfiguration des Standard-Plugins Notificaties API.',
+      orderTitle: 'Schritt 1 von 2. Konfigurieren Sie danach das Standard-Plugin Notificaties API',
+      orderMessage:
+        'Diese Konfiguration teilt GZAC nur mit, dass ein Administrator das Abonnement in diesem Open Notificaties anlegt. Speichern Sie sie zuerst. Legen Sie danach eine Konfiguration des Standard-Plugins Notificaties API mit genau derselben Notificaties API URL an und füllen Sie dort den Authentifizierungs-Header aus: Das ist das Geheimnis des Abonnements. Verknüpfen Sie Verzoek, Portaaltaak und Prozessverknüpfungen mit dieser Konfiguration. In der anderen Reihenfolge versucht GZAC, das Abonnement selbst zu registrieren, was hinter einem Gateway mit Zertifikatsprüfung fehlschlägt.',
+      standardPluginTitle: 'Schritt 2. Standard-Plugin Notificaties API',
+      standardPluginMissing:
+        'Noch keine Konfiguration des Standard-Plugins Notificaties API verwendet diese URL. Legen Sie jetzt eine an, mit derselben Notificaties API URL und einem Authentifizierungs-Header.',
+      standardPluginMultiple:
+        'Mehr als eine Konfiguration des Standard-Plugins Notificaties API verwendet diese URL. GZAC akzeptiert den Authentifizierungs-Header nur einer davon: Verwenden Sie eine Konfiguration.',
+      standardPluginAuthHeaderFilledIn: 'Authentifizierungs-Header ausgefüllt',
+      standardPluginAuthHeaderEmpty:
+        'Der Authentifizierungs-Header ist leer. Füllen Sie ihn aus: Sonst wählt GZAC ein Geheimnis, das Sie nicht sehen können, und lehnt die Benachrichtigungen ab.',
+      abonnementTitle: 'Abonnement in Open Notificaties',
+      abonnementDescription:
+        'Legen Sie in Open Notificaties ein Abonnement mit diesen Angaben an. GZAC empfängt die Benachrichtigungen an der Adresse des Standard-Plugins Notificaties API.',
+      abonnementCallbackUrl: 'Callback URL',
+      abonnementCallbackUrlHint:
+        'Die Callback URL der Standard-Konfiguration: die Adresse, über die Open Notificaties GZAC erreicht, gefolgt von /api/v1/notificatiesapi/callback',
+      abonnementAuth: 'Auth',
+      abonnementAuthValue: 'Der Authentifizierungs-Header der Standard-Konfiguration',
+      abonnementKanaal: 'Kanal',
+      abonnementNoKanalen:
+        'Noch keine Kanäle nötig: Keine Prozessverknüpfungen, Verzoek- oder Portaaltaak-Konfigurationen verwenden diese URL.',
+      saveFirst:
+        'Speichern Sie diese Konfiguration, um zu sehen, welche Konfiguration des Standard-Plugins und welches Abonnement noch nötig sind.',
     },
   },
 };

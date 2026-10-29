@@ -19,11 +19,21 @@ interface NotificatiesApiManualPluginKanaal {
   filters: {[key: string]: string};
 }
 
-interface NotificatiesApiManualPluginManualAbonnement {
+/** A configuration of the standard Notificaties API plugin with the same URL. */
+interface NotificatiesApiManualPluginCoreConfiguration {
+  id: string;
+  title: string;
   callbackUrl: string | null;
-  kanalen: Array<NotificatiesApiManualPluginKanaal>;
-  /** When a notificatie for this configuration last arrived on the standard plugin's callback address (ISO-8601). */
-  misroutedCallbackAt?: string | null;
+  authHeaderFilledIn: boolean;
 }
 
-export {NotificatiesApiManualPluginKanaal, NotificatiesApiManualPluginManualAbonnement};
+interface NotificatiesApiManualPluginManualAbonnement {
+  coreConfigurations: Array<NotificatiesApiManualPluginCoreConfiguration>;
+  kanalen: Array<NotificatiesApiManualPluginKanaal>;
+}
+
+export {
+  NotificatiesApiManualPluginCoreConfiguration,
+  NotificatiesApiManualPluginKanaal,
+  NotificatiesApiManualPluginManualAbonnement,
+};

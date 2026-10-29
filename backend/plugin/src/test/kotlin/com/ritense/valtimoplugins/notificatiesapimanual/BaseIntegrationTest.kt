@@ -20,8 +20,12 @@ import com.ritense.notificatiesapi.client.NotificatiesApiClient
 import com.ritense.testutilscommon.junit.extension.LiquibaseRunnerExtension
 import com.ritense.valtimo.contract.authentication.UserManagementService
 import com.ritense.valtimo.contract.mail.MailSender
+import com.ritense.valtimoplugins.notificatiesapimanual.registration.NotificatiesApiManualPluginCoreClient.Companion.unwrapped
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.kotlin.reset
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.junit.jupiter.SpringExtension
@@ -36,7 +40,16 @@ abstract class BaseIntegrationTest : BaseTest() {
     @MockitoBean
     lateinit var mailSender: MailSender
 
-    // Core's client, shared with this plugin: no test may reach a real Open Notificaties.
-    @MockitoBean
-    lateinit var notificatiesApiClient: NotificatiesApiClient
+    /** The bean in the context: this plugin's wrapper around the mock of [TestApplication]. */
+    @Autowired
+    lateinit var notificatiesApiClientBean: NotificatiesApiClient
+
+    /** The mock behind [notificatiesApiClientBean]: every call that would reach Open Notificaties. */
+    val notificatiesApiClient: NotificatiesApiClient
+        get() = notificatiesApiClientBean.unwrapped()
+
+    @AfterEach
+    fun resetNotificatiesApiClient() {
+        reset(notificatiesApiClient)
+    }
 }

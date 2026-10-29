@@ -17,135 +17,39 @@
 package com.ritense.valtimoplugins.notificatiesapimanual.autoconfiguration
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ritense.case.service.CaseDefinitionService
 import com.ritense.notificatiesapi.autoconfigure.NotificatiesApiAutoConfiguration
-import com.ritense.notificatiesapi.client.NotificatiesApiClient
-import com.ritense.notificatiesapi.service.NotificatiesApiService
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginService
-import com.ritense.processdocument.service.ProcessDefinitionCaseDefinitionService
-import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.valtimo.contract.config.LiquibaseMasterChangeLogLocation
-import com.ritense.valtimo.service.ProcessPropertyService
-import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginCallbackResource
-import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginCallbackService
-import com.ritense.valtimoplugins.notificatiesapimanual.callback.NotificatiesApiManualPluginMisroutedCallbackFilter
-import com.ritense.valtimoplugins.notificatiesapimanual.config.NotificatiesApiManualPluginProperties
-import com.ritense.valtimoplugins.notificatiesapimanual.listener.NotificatiesApiManualPluginProcessLinkListener
 import com.ritense.valtimoplugins.notificatiesapimanual.manual.NotificatiesApiManualPluginManualAbonnementResource
 import com.ritense.valtimoplugins.notificatiesapimanual.manual.NotificatiesApiManualPluginManualAbonnementService
-import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin.Companion.CORE_CALLBACK_PATH
 import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPluginFactory
-import com.ritense.valtimoplugins.notificatiesapimanual.registration.NotificatiesApiManualPluginAbonnementRegistrar
-import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginAbonnementLinkRepository
-import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
+import com.ritense.valtimoplugins.notificatiesapimanual.registration.NotificatiesApiManualPluginCoreClientPostProcessor
 import com.ritense.valtimoplugins.notificatiesapimanual.security.NotificatiesApiManualPluginHttpSecurityConfigurer
-import org.operaton.bpm.engine.RepositoryService
-import org.operaton.bpm.engine.RuntimeService
-import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
-import org.springframework.boot.autoconfigure.domain.EntityScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.core.annotation.Order
-import org.springframework.core.task.TaskExecutor
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
-import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.web.client.RestClient
 
 /**
  * Every bean name starts with `notificatiesApiManualPlugin`: core #971 (13.52) already has beans named
  * `notificatiesApiManualAbonnement*`, and GZAC applications allow bean overriding, so a clash would silently replace
- * a core bean. Core types are only used, never subclassed, so core's `@ConditionalOnMissingBean` beans stay.
+ * a core bean. Core's `@ConditionalOnMissingBean` beans stay: the only core type subclassed,
+ * `NotificatiesApiClient`, is wrapped after creation instead of replaced.
  */
 @AutoConfiguration(after = [NotificatiesApiAutoConfiguration::class])
-@EnableConfigurationProperties(NotificatiesApiManualPluginProperties::class)
-@EnableJpaRepositories(basePackageClasses = [NotificatiesApiManualPluginAbonnementLinkRepository::class])
-@EntityScan(basePackages = ["com.ritense.valtimoplugins.notificatiesapimanual.domain"])
 class NotificatiesApiManualPluginAutoConfiguration {
     @Bean
-    fun notificatiesApiManualPluginFactory(
-        pluginService: PluginService,
-        client: NotificatiesApiClient,
-    ): NotificatiesApiManualPluginFactory = NotificatiesApiManualPluginFactory(pluginService, client)
-
-    @Bean
-    fun notificatiesApiManualPluginAbonnementRegistrar(
-        client: NotificatiesApiClient,
-        linkRepository: NotificatiesApiManualPluginAbonnementLinkRepository,
-        pluginService: PluginService,
-        pluginProcessLinkRepository: PluginProcessLinkRepository,
-        transactionManager: PlatformTransactionManager,
-        properties: NotificatiesApiManualPluginProperties,
-        @Qualifier("notificatiesApiManualPluginRegistrationExecutor") registrationExecutor: TaskExecutor,
-    ): NotificatiesApiManualPluginAbonnementRegistrar =
-        NotificatiesApiManualPluginAbonnementRegistrar(
-            client,
-            linkRepository,
-            pluginService,
-            pluginProcessLinkRepository,
-            transactionManager,
-            properties,
-            registrationExecutor,
-        )
-
-    /**
-     * Single-threaded executor all registration work runs on (the startup retry loop, event-triggered sweeps, cleanup
-     * after a deleted configuration): never on the event thread or a request, and never two at a time.
-     * Daemon threads that are not awaited on shutdown, so a pending retry never delays JVM exit.
-     */
-    @Bean("notificatiesApiManualPluginRegistrationExecutor")
-    fun notificatiesApiManualPluginRegistrationExecutor(): TaskExecutor =
-        ThreadPoolTaskExecutor().apply {
-            threadNamePrefix = "notificaties-api-manual-plugin-abonnement-registration-"
-            corePoolSize = 1
-            maxPoolSize = 1
-            // Unbounded: cleanups after deleted configurations are not coalesced, and none may be rejected.
-            setDaemon(true)
-            setWaitForTasksToCompleteOnShutdown(false)
-            initialize()
-        }
-
-    @Bean
-    fun notificatiesApiManualPluginCallbackService(
-        pluginService: PluginService,
-        linkRepository: NotificatiesApiManualPluginAbonnementLinkRepository,
-        notificatiesApiService: NotificatiesApiService,
-        misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository,
-    ): NotificatiesApiManualPluginCallbackService =
-        NotificatiesApiManualPluginCallbackService(
-            pluginService,
-            linkRepository,
-            notificatiesApiService,
-            misroutedCallbackRepository,
-        )
-
-    @Bean
-    fun notificatiesApiManualPluginCallbackResource(
-        callbackService: NotificatiesApiManualPluginCallbackService,
-    ): NotificatiesApiManualPluginCallbackResource = NotificatiesApiManualPluginCallbackResource(callbackService)
-
-    /** Notices notificaties for a manual configuration that arrive on core's callback address. */
-    @Bean
-    fun notificatiesApiManualPluginMisroutedCallbackFilter(
-        callbackService: NotificatiesApiManualPluginCallbackService,
-    ): FilterRegistrationBean<NotificatiesApiManualPluginMisroutedCallbackFilter> =
-        FilterRegistrationBean(NotificatiesApiManualPluginMisroutedCallbackFilter(callbackService)).apply {
-            addUrlPatterns(CORE_CALLBACK_PATH)
-        }
+    fun notificatiesApiManualPluginFactory(pluginService: PluginService): NotificatiesApiManualPluginFactory =
+        NotificatiesApiManualPluginFactory(pluginService)
 
     @Bean
     fun notificatiesApiManualPluginManualAbonnementService(
         pluginService: PluginService,
         pluginProcessLinkRepository: PluginProcessLinkRepository,
-        misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository,
     ): NotificatiesApiManualPluginManualAbonnementService =
-        NotificatiesApiManualPluginManualAbonnementService(
-            pluginService,
-            pluginProcessLinkRepository,
-            misroutedCallbackRepository,
-        )
+        NotificatiesApiManualPluginManualAbonnementService(pluginService, pluginProcessLinkRepository)
 
     @Bean
     fun notificatiesApiManualPluginManualAbonnementResource(
@@ -153,36 +57,26 @@ class NotificatiesApiManualPluginAutoConfiguration {
     ): NotificatiesApiManualPluginManualAbonnementResource =
         NotificatiesApiManualPluginManualAbonnementResource(manualAbonnementService)
 
-    @Bean
-    fun notificatiesApiManualPluginProcessLinkListener(
-        pluginProcessLinkRepository: PluginProcessLinkRepository,
-        runtimeService: RuntimeService,
-        repositoryService: RepositoryService,
-        processPropertyService: ProcessPropertyService,
-        processDefinitionCaseDefinitionService: ProcessDefinitionCaseDefinitionService,
-        processDocumentService: ProcessDocumentService,
-        caseDefinitionService: CaseDefinitionService,
-        objectMapper: ObjectMapper,
-    ): NotificatiesApiManualPluginProcessLinkListener =
-        NotificatiesApiManualPluginProcessLinkListener(
-            pluginProcessLinkRepository,
-            runtimeService,
-            repositoryService,
-            processPropertyService,
-            processDefinitionCaseDefinitionService,
-            processDocumentService,
-            caseDefinitionService,
-            objectMapper,
-        )
-
     // Core uses 270; DenyAllHttpSecurityConfigurer (500) must stay last.
     @Bean
     @Order(271)
     fun notificatiesApiManualPluginHttpSecurityConfigurer(): NotificatiesApiManualPluginHttpSecurityConfigurer =
         NotificatiesApiManualPluginHttpSecurityConfigurer()
 
-    // The tables have no foreign keys, so the changelog can run in any order relative to core's.
+    // Only drops the tables of versions before 2.0.0, so it can run in any order relative to core's changelog.
     @Bean
     fun notificatiesApiManualPluginLiquibaseMasterChangeLogLocation(): LiquibaseMasterChangeLogLocation =
         LiquibaseMasterChangeLogLocation("config/liquibase/notificaties-api-manual-master.xml")
+
+    companion object {
+        /** Static, as a bean post-processor must be, so this configuration class is not created early. */
+        @JvmStatic
+        @Bean
+        fun notificatiesApiManualPluginCoreClientPostProcessor(
+            pluginService: ObjectProvider<PluginService>,
+            restClientBuilder: ObjectProvider<RestClient.Builder>,
+            objectMapper: ObjectProvider<ObjectMapper>,
+        ): NotificatiesApiManualPluginCoreClientPostProcessor =
+            NotificatiesApiManualPluginCoreClientPostProcessor(pluginService, restClientBuilder, objectMapper)
+    }
 }

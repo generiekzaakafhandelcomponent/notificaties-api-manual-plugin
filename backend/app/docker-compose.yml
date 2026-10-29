@@ -90,7 +90,7 @@ services:
       - CACHE_DEFAULT=openzaak-redis:6379/0
       - CACHE_AXES=openzaak-redis:6379/0
       - DEBUG=true
-      - ALLOWED_HOSTS=localhost,host.docker.internal,172.17.0.1,openzaak
+      - ALLOWED_HOSTS=localhost,127.0.0.1,host.docker.internal,172.17.0.1,openzaak
       - OPENZAAK_SUPERUSER_USERNAME=admin
       - OPENZAAK_SUPERUSER_EMAIL=admin@admin.org
       - DJANGO_SUPERUSER_PASSWORD=admin
@@ -289,6 +289,41 @@ services:
     depends_on:
       objecttypen-api:
         condition: service_healthy
+
+  # Gateway that demands a client certificate (mutual TLS) for the traffic between Valtimo and the ZGW APIs, in both
+  # directions. Certificates: imports/mtls-gateway/generate-certs.sh. See documentation/example-application.md.
+  mtls-gateway:
+    image: nginx:1.30.6-alpine
+    container_name: plugin-docker-compose-mtls-gateway
+    profiles:
+      - zgw
+      - mtls
+    ports:
+      - "8443:8443" # Objecten API
+      - "8444:8444" # Open Zaak
+      - "8445:8445" # Open Notificaties
+      - "8446:8446" # Valtimo: callback of the plugin with manual abonnement registration
+      - "8447:8447" # Objecttypen API
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./imports/mtls-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./imports/mtls-gateway/certs:/etc/nginx/certs:ro
+
+  # Outgoing proxy of the Open Notificaties delivery worker: presents the client certificate of Open Notificaties to the
+  # gateway. Abonnementen use http://localhost:8446/... as callback URL to go through it.
+  open-notificaties-egress:
+    image: nginx:1.30.6-alpine
+    container_name: plugin-docker-compose-open-notificaties-egress
+    profiles:
+      - zgw
+    network_mode: service:open-notificaties-celery
+    volumes:
+      - ./imports/mtls-gateway/open-notificaties-egress.conf:/etc/nginx/nginx.conf:ro
+      - ./imports/mtls-gateway/certs:/etc/nginx/certs:ro
+    depends_on:
+      - open-notificaties-celery
+      - mtls-gateway
 
   open-notificaties-rabbitmq:
     image: rabbitmq:4.1.0-management

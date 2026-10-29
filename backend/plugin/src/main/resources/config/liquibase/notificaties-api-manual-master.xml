@@ -25,5 +25,6 @@
 
     <include file="changelog/20261026-add-notificaties-api-manual-abonnement-link-table.xml" relativeToChangelogFile="true"/>
     <include file="changelog/20261028-add-notificaties-api-manual-misrouted-callback-table.xml" relativeToChangelogFile="true"/>
+    <include file="changelog/20261029-drop-notificaties-api-manual-tables.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

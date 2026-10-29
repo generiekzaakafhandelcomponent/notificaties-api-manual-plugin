@@ -25,15 +25,11 @@ import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginConfigurationSearchParameters
 import com.ritense.plugin.service.PluginService
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures
-import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.CALLBACK_URL
+import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.CORE_CALLBACK_URL
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.ON_URL
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.OTHER_ON_URL
 import com.ritense.valtimoplugins.notificatiesapimanual.TestFixtures.receiveLink
-import com.ritense.valtimoplugins.notificatiesapimanual.domain.AbonnementRegistration.MANUAL
-import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginConfigurationId
-import com.ritense.valtimoplugins.notificatiesapimanual.domain.NotificatiesApiManualPluginMisroutedCallback
-import com.ritense.valtimoplugins.notificatiesapimanual.plugin.NotificatiesApiManualPlugin
-import com.ritense.valtimoplugins.notificatiesapimanual.repository.NotificatiesApiManualPluginMisroutedCallbackRepository
+import com.ritense.valtimoplugins.notificatiesapimanual.manual.NotificatiesApiManualPluginManualAbonnementService.CoreConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -42,8 +38,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.net.URI
-import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -51,43 +45,31 @@ import kotlin.test.assertNull
 class NotificatiesApiManualPluginManualAbonnementServiceTest {
     private lateinit var pluginService: PluginService
     private lateinit var processLinkRepository: PluginProcessLinkRepository
-    private lateinit var misroutedCallbackRepository: NotificatiesApiManualPluginMisroutedCallbackRepository
     private lateinit var service: NotificatiesApiManualPluginManualAbonnementService
 
-    private val manual = TestFixtures.plugin(registration = MANUAL, secret = "secret")
-    private val otherManual = TestFixtures.plugin(registration = MANUAL, secret = "secret")
-    private val automatic = TestFixtures.plugin()
+    private val manual = TestFixtures.manualConfiguration(url = ON_URL.trimEnd('/'))
 
-    private val coreOnSameUrl = corePlugin("$ON_URL/".trimEnd('/') + "/")
+    private val coreOnSameUrl = corePlugin(ON_URL)
     private val coreOnOtherUrl = corePlugin(OTHER_ON_URL)
     private val verzoekOnSameUrl =
-        listener(
-            coreOnSameUrl,
-            Abonnement.Kanaal(
-                naam = "objecten",
-                filters =
-                    mapOf(
-                        "actie" to "create",
-                    ),
-            ),
-        )
+        listener(coreOnSameUrl, Abonnement.Kanaal(naam = "objecten", filters = mapOf("actie" to "create")))
     private val verzoekOnOtherUrl = listener(coreOnOtherUrl, Abonnement.Kanaal(naam = "taken"))
+
+    private lateinit var coreConfigurations: List<PluginConfiguration>
+    private lateinit var coreListeners: Map<PluginConfiguration, NotificatiesApiListener>
 
     @BeforeEach
     fun setUp() {
         pluginService = mock()
         processLinkRepository = mock()
-        misroutedCallbackRepository = mock()
-        service =
-            NotificatiesApiManualPluginManualAbonnementService(
-                pluginService,
-                processLinkRepository,
-                misroutedCallbackRepository,
-            )
-        whenever(misroutedCallbackRepository.findById(any())).thenReturn(Optional.empty())
+        service = NotificatiesApiManualPluginManualAbonnementService(pluginService, processLinkRepository)
 
-        val ownConfigurations = listOf(manual, otherManual, automatic).associateBy { TestFixtures.configurationOf(it) }
-        val coreListeners =
+        coreConfigurations =
+            listOf(
+                coreConfiguration(coreOnSameUrl, "Notificaties API via gateway", authHeader = "a-shared-secret"),
+                coreConfiguration(coreOnOtherUrl, "Notificaties API elders", authHeader = null),
+            )
+        coreListeners =
             listOf<NotificatiesApiListener>(coreOnSameUrl, coreOnOtherUrl, verzoekOnSameUrl, verzoekOnOtherUrl)
                 .associateBy { mock<PluginConfiguration>() }
 
@@ -95,26 +77,14 @@ class NotificatiesApiManualPluginManualAbonnementServiceTest {
         whenever(pluginService.getPluginConfigurations(any())).thenAnswer { invocation ->
             val search = invocation.getArgument<PluginConfigurationSearchParameters>(0)
             when {
-                search.pluginDefinitionKey == NotificatiesApiManualPlugin.PLUGIN_KEY -> ownConfigurations.keys.toList()
+                search.pluginDefinitionKey == "notificatiesapi-manual" -> listOf(manual)
+                search.pluginDefinitionKey == "notificatiesapi" -> coreConfigurations
                 search.category == "notificaties-api-plugin" -> coreListeners.keys.toList()
                 else -> emptyList()
             }
         }
         whenever(pluginService.createInstance(any<PluginConfiguration>())).thenAnswer { invocation ->
-            val configuration = invocation.getArgument<PluginConfiguration>(0)
-            ownConfigurations[configuration] ?: coreListeners[configuration]
-        }
-        whenever(
-            processLinkRepository.findByPluginDefinitionKeyAndPluginActionDefinitionKey(
-                eq("notificatiesapi-manual"),
-                any(),
-            ),
-        ).thenAnswer {
-            listOf(
-                receiveLink(manual.configurationId.id, "zaken", "create"),
-                receiveLink(otherManual.configurationId.id, "besluiten"),
-                receiveLink(null, "building-block"),
-            )
+            coreListeners[invocation.getArgument<PluginConfiguration>(0)]
         }
         whenever(
             processLinkRepository.findByPluginDefinitionKeyAndPluginActionDefinitionKey(eq("notificatiesapi"), any()),
@@ -128,13 +98,42 @@ class NotificatiesApiManualPluginManualAbonnementServiceTest {
     }
 
     @Test
-    fun `lists its own links and the core filters of the same Open Notificaties URL, nothing else`() {
-        val result = service.getManualAbonnement(manual.configurationId.id)!!
+    fun `lists the standard configurations on the same URL, without their secret`() {
+        val result = service.getManualAbonnement(manual.id.id)!!
 
-        assertEquals(CALLBACK_URL, result.callbackUrl)
+        assertEquals(
+            listOf(
+                CoreConfiguration(
+                    id = coreOnSameUrl.notificatiesApiConfigurationId.id,
+                    title = "Notificaties API via gateway",
+                    callbackUrl = CORE_CALLBACK_URL,
+                    authHeaderFilledIn = true,
+                ),
+            ),
+            result.coreConfigurations,
+        )
+    }
+
+    @Test
+    fun `tells when the Auth header of a standard configuration is empty`() {
+        coreConfigurations = listOf(coreConfiguration(coreOnSameUrl, "Zonder geheim", authHeader = " "))
+
+        assertEquals(
+            false,
+            service
+                .getManualAbonnement(manual.id.id)!!
+                .coreConfigurations
+                .single()
+                .authHeaderFilledIn,
+        )
+    }
+
+    @Test
+    fun `lists the kanalen of the standard configurations and listeners on the same URL, nothing else`() {
+        val result = service.getManualAbonnement(manual.id.id)!!
+
         assertEquals(
             setOf(
-                Abonnement.Kanaal(naam = "zaken", filters = mapOf("actie" to "create")),
                 Abonnement.Kanaal(naam = "documenten", filters = mapOf("actie" to "update")),
                 Abonnement.Kanaal(naam = "objecten", filters = mapOf("actie" to "create")),
             ),
@@ -143,52 +142,29 @@ class NotificatiesApiManualPluginManualAbonnementServiceTest {
     }
 
     @Test
-    fun `lists the kanalen of a configuration without callback URL`() {
-        manual.callbackUrl = null
+    fun `lists nothing to do yet before the standard configuration exists`() {
+        coreConfigurations = emptyList()
+        coreListeners = emptyMap()
 
-        val result = service.getManualAbonnement(manual.configurationId.id)!!
+        val result = service.getManualAbonnement(manual.id.id)!!
 
-        assertNull(result.callbackUrl)
-        assertEquals(3, result.kanalen.size)
+        assertEquals(emptyList(), result.coreConfigurations)
+        assertEquals(emptyList(), result.kanalen)
     }
 
     @Test
-    fun `tells when a notificatie for the configuration arrived on core's callback address`() {
-        assertNull(service.getManualAbonnement(manual.configurationId.id)!!.misroutedCallbackAt)
-
-        val receivedAt = Instant.parse("2026-10-28T09:15:00Z")
-        val id = NotificatiesApiManualPluginConfigurationId(manual.configurationId.id)
-        whenever(misroutedCallbackRepository.findById(id))
-            .thenReturn(Optional.of(NotificatiesApiManualPluginMisroutedCallback(id, receivedAt)))
-
-        assertEquals(receivedAt, service.getManualAbonnement(manual.configurationId.id)!!.misroutedCallbackAt)
-    }
-
-    @Test
-    fun `returns nothing for an automatic, unknown or other configuration`() {
-        assertNull(service.getManualAbonnement(automatic.configurationId.id))
+    fun `returns nothing for an unknown configuration`() {
         assertNull(service.getManualAbonnement(UUID.randomUUID()))
     }
 
     @Test
-    fun `a failing core listener is skipped`() {
+    fun `a failing listener is skipped`() {
         val failing = mock<NotificatiesApiListener> { on { getNotificatiesApiPlugin() } doReturn coreOnSameUrl }
         whenever(failing.getKanaalFilters()).thenThrow(IllegalStateException("broken"))
         val failingConfiguration = mock<PluginConfiguration> { on { id } doReturn PluginConfigurationId.newId() }
-        val current =
-            pluginService.getPluginConfigurations(
-                PluginConfigurationSearchParameters(category = "notificaties-api-plugin"),
-            )
-        whenever(
-            pluginService.getPluginConfigurations(
-                eq(PluginConfigurationSearchParameters(category = "notificaties-api-plugin")),
-            ),
-        ).thenReturn(current + failingConfiguration)
-        whenever(pluginService.createInstance(failingConfiguration)).thenReturn(failing)
+        coreListeners = coreListeners + (failingConfiguration to failing)
 
-        val result = service.getManualAbonnement(manual.configurationId.id)!!
-
-        assertEquals(3, result.kanalen.size)
+        assertEquals(2, service.getManualAbonnement(manual.id.id)!!.kanalen.size)
     }
 
     private fun corePlugin(url: String): NotificatiesApiPlugin =
@@ -198,6 +174,17 @@ class NotificatiesApiManualPluginManualAbonnementServiceTest {
             TestFixtures.objectMapper,
             mock(),
         ).apply { this.url = URI(url) }
+
+    private fun coreConfiguration(
+        core: NotificatiesApiPlugin,
+        title: String,
+        authHeader: String?,
+    ) = TestFixtures.pluginConfiguration(
+        core.notificatiesApiConfigurationId.id,
+        "notificatiesapi",
+        mapOf("url" to core.url.toString(), "callbackUrl" to CORE_CALLBACK_URL, "authHeader" to authHeader),
+        title,
+    )
 
     private fun listener(
         core: NotificatiesApiPlugin,

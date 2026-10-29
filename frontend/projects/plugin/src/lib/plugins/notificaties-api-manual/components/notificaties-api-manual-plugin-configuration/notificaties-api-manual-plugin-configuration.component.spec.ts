@@ -16,50 +16,42 @@
 
 import {NO_ERRORS_SCHEMA, Pipe, PipeTransform} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {TranslateService} from '@ngx-translate/core';
 import {Observable, of, Subject} from 'rxjs';
-import {PluginManagementService, PluginTranslationService} from '@valtimo/plugin';
-import {
-  NotificatiesApiManualPluginAbonnementRegistration,
-  NotificatiesApiManualPluginConfig,
-  NotificatiesApiManualPluginManualAbonnement,
-} from '../../models';
+import {NotificatiesApiManualPluginConfig, NotificatiesApiManualPluginManualAbonnement} from '../../models';
 import {NotificatiesApiManualPluginService} from '../../services';
+import {NOTIFICATIES_API_MANUAL_PLUGIN_CONFIGURATION_TEST_IDS} from '../../test-ids';
 import {NotificatiesApiManualPluginConfigurationComponent} from './notificaties-api-manual-plugin-configuration.component';
+
+const MANUAL_ABONNEMENT: NotificatiesApiManualPluginManualAbonnement = {
+  coreConfigurations: [
+    {
+      id: '020e6ca3-1c15-4496-a4cf-67bfaa36332f',
+      title: 'Notificaties API via gateway',
+      callbackUrl: 'https://gateway.example.com/api/v1/notificatiesapi/callback',
+      authHeaderFilledIn: true,
+    },
+  ],
+  kanalen: [{naam: 'zaken', filters: {actie: 'create'}}],
+};
+
+const CONFIGURATION = {
+  configurationTitle: 'Open Notificaties via gateway',
+  url: 'https://opennotificaties.example.com/api/v1/',
+} as NotificatiesApiManualPluginConfig;
 
 describe('NotificatiesApiManualPluginConfigurationComponent', () => {
   let component: NotificatiesApiManualPluginConfigurationComponent;
   let save$: Subject<void>;
   let notificatiesApiPluginService: jasmine.SpyObj<NotificatiesApiManualPluginService>;
 
-  const MANUAL_ABONNEMENT: NotificatiesApiManualPluginManualAbonnement = {
-    callbackUrl: 'https://gateway.example.com/api/v1/notificatiesapi-manual/callback',
-    kanalen: [{naam: 'zaken', filters: {actie: 'create'}}],
-  };
-
-  const CONFIGURATION_WITHOUT_AUTHENTICATION = {
-    configurationTitle: 'Notificaties API Plugin',
-    url: 'https://opennotificaties.example.com/api/v1/',
-    callbackUrl: 'https://gzac.example.com/api/v1/notificatiesapi-manual/callback',
-  } as NotificatiesApiManualPluginConfig;
-
   beforeEach(() => {
     save$ = new Subject<void>();
     notificatiesApiPluginService = jasmine.createSpyObj<NotificatiesApiManualPluginService>(
       'NotificatiesApiManualPluginService',
-      {
-        getManualAbonnement: of(MANUAL_ABONNEMENT),
-      }
+      {getManualAbonnement: of(MANUAL_ABONNEMENT)}
     );
 
-    component = new NotificatiesApiManualPluginConfigurationComponent(
-      jasmine.createSpyObj('PluginManagementService', {
-        getPluginConfigurationsByCategory: of([]),
-      }),
-      jasmine.createSpyObj('TranslateService', {stream: of('key')}),
-      jasmine.createSpyObj('PluginTranslationService', {instant: 'title'}),
-      notificatiesApiPluginService
-    );
+    component = new NotificatiesApiManualPluginConfigurationComponent(notificatiesApiPluginService);
     component.save$ = save$;
     component.ngOnInit();
   });
@@ -68,170 +60,49 @@ describe('NotificatiesApiManualPluginConfigurationComponent', () => {
     component.ngOnDestroy();
   });
 
-  it('should not be valid without an authentication plugin configuration', () => {
+  it('should save a configuration with a title and a URL', () => {
     const validEmissions: boolean[] = [];
+    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
     component.valid.subscribe(valid => validEmissions.push(valid));
+    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
 
-    component.formValueChange(CONFIGURATION_WITHOUT_AUTHENTICATION);
+    component.formValueChange(CONFIGURATION);
+    save$.next();
 
-    expect(validEmissions).toEqual([false]);
+    expect(validEmissions).toEqual([true]);
+    expect(emittedConfigurations).toEqual([CONFIGURATION]);
   });
 
-  it('should not save a configuration without an authentication plugin configuration', () => {
+  it('should not save a configuration without a URL', () => {
     const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
     component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
 
-    component.formValueChange(CONFIGURATION_WITHOUT_AUTHENTICATION);
+    component.formValueChange({...CONFIGURATION, url: ''});
     save$.next();
 
     expect(emittedConfigurations).toEqual([]);
   });
 
-  it('should save a configuration with an authentication plugin configuration', () => {
-    const configurationWithAuthentication = {
-      ...CONFIGURATION_WITHOUT_AUTHENTICATION,
-      authenticationPluginConfiguration: '5474fe57-532a-4050-8d89-32e62ca3e895',
-    } as NotificatiesApiManualPluginConfig;
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange(configurationWithAuthentication);
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([configurationWithAuthentication]);
-  });
-
-  const CONFIGURATION_WITH_AUTHENTICATION = {
-    ...CONFIGURATION_WITHOUT_AUTHENTICATION,
-    authenticationPluginConfiguration: '5474fe57-532a-4050-8d89-32e62ca3e895',
-  } as NotificatiesApiManualPluginConfig;
-
-  it('should not save a manual configuration without a shared secret', () => {
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'manual',
-      authHeader: '  ',
-    });
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([]);
-  });
-
-  it('should save a manual configuration with a shared secret', () => {
-    const manualConfiguration = {
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'manual',
-      authHeader: 'shared-secret',
-    } as NotificatiesApiManualPluginConfig;
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange(manualConfiguration);
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([manualConfiguration]);
-  });
-
-  it('should save a manual configuration without a callback URL as having none', () => {
-    const manualConfiguration = {
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      callbackUrl: '',
-      abonnementRegistration: 'manual',
-      authHeader: 'shared-secret',
-    } as NotificatiesApiManualPluginConfig;
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange(manualConfiguration);
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([{...manualConfiguration, callbackUrl: null}]);
-  });
-
-  it('should not save an automatic configuration without a callback URL', () => {
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      callbackUrl: '',
-      abonnementRegistration: 'automatic',
-    });
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([]);
-  });
-
-  it('should save an automatic configuration without a shared secret', () => {
-    const automaticConfiguration = {
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'automatic',
-    } as NotificatiesApiManualPluginConfig;
-    const emittedConfigurations: NotificatiesApiManualPluginConfig[] = [];
-    component.configuration.subscribe(configuration => emittedConfigurations.push(configuration));
-
-    component.formValueChange(automaticConfiguration);
-    save$.next();
-
-    expect(emittedConfigurations).toEqual([automaticConfiguration]);
-  });
-
-  it('should load the kanalen and filters of a saved manual configuration', () => {
+  it('should load what is still needed for a saved configuration', () => {
     component.prefillConfiguration$ = of({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
+      ...CONFIGURATION,
       configurationId: 'b2f4c1d0-0000-4000-8000-000000000001',
-      abonnementRegistration: 'manual',
     });
-    const manualAbonnementEmissions: Array<NotificatiesApiManualPluginManualAbonnement | null> = [];
-    component.manualAbonnement$.subscribe(abonnement => manualAbonnementEmissions.push(abonnement));
-
-    component.formValueChange({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'manual',
-    });
+    const emissions: Array<NotificatiesApiManualPluginManualAbonnement | null> = [];
+    component.manualAbonnement$.subscribe(abonnement => emissions.push(abonnement));
 
     expect(notificatiesApiPluginService.getManualAbonnement).toHaveBeenCalledOnceWith(
       'b2f4c1d0-0000-4000-8000-000000000001'
     );
-    expect(manualAbonnementEmissions).toEqual([null, MANUAL_ABONNEMENT]);
+    expect(emissions).toEqual([MANUAL_ABONNEMENT]);
   });
 
-  it('should not load kanalen and filters before an automatic configuration is saved as manual', () => {
-    component.prefillConfiguration$ = of({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      configurationId: 'b2f4c1d0-0000-4000-8000-000000000001',
-      abonnementRegistration: 'automatic',
-    });
-    const manualAbonnementEmissions: Array<NotificatiesApiManualPluginManualAbonnement | null> = [];
-    component.manualAbonnement$.subscribe(abonnement => manualAbonnementEmissions.push(abonnement));
-
-    component.formValueChange({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'manual',
-    });
+  it('should load nothing for a new configuration', () => {
+    const emissions: Array<NotificatiesApiManualPluginManualAbonnement | null> = [];
+    component.manualAbonnement$.subscribe(abonnement => emissions.push(abonnement));
 
     expect(notificatiesApiPluginService.getManualAbonnement).not.toHaveBeenCalled();
-    expect(manualAbonnementEmissions.every(abonnement => abonnement === null)).toBeTrue();
-  });
-
-  it('should not load kanalen and filters for an automatic configuration', () => {
-    component.prefillConfiguration$ = of({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      configurationId: 'b2f4c1d0-0000-4000-8000-000000000001',
-    });
-    const manualAbonnementEmissions: Array<NotificatiesApiManualPluginManualAbonnement | null> = [];
-    component.manualAbonnement$.subscribe(abonnement => manualAbonnementEmissions.push(abonnement));
-
-    component.formValueChange({
-      ...CONFIGURATION_WITH_AUTHENTICATION,
-      abonnementRegistration: 'automatic',
-    });
-
-    expect(notificatiesApiPluginService.getManualAbonnement).not.toHaveBeenCalled();
-    expect(manualAbonnementEmissions).toEqual([null]);
+    expect(emissions).toEqual([null]);
   });
 });
 
@@ -252,94 +123,55 @@ describe('NotificatiesApiManualPluginConfigurationComponent template', () => {
       declarations: [NotificatiesApiManualPluginConfigurationComponent, PluginTranslateStubPipe],
       providers: [
         {
-          provide: PluginManagementService,
-          useValue: {getPluginConfigurationsByCategory: () => of([])},
-        },
-        {provide: TranslateService, useValue: {stream: () => of('key')}},
-        {provide: PluginTranslationService, useValue: {instant: (key: string) => key}},
-        {
           provide: NotificatiesApiManualPluginService,
-          useValue: {
-            getManualAbonnement: () =>
-              of({callbackUrl: 'https://gateway.example.com/callback', kanalen: []}),
-          },
+          useValue: {getManualAbonnement: () => of(MANUAL_ABONNEMENT)},
         },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
   });
 
-  const render = (abonnementRegistration?: NotificatiesApiManualPluginAbonnementRegistration): void => {
+  const render = (configurationId?: string): void => {
     fixture = TestBed.createComponent(NotificatiesApiManualPluginConfigurationComponent);
-    fixture.componentInstance.pluginId = 'notificatiesapi';
+    fixture.componentInstance.pluginId = 'notificatiesapi-manual';
     fixture.componentInstance.disabled$ = of(false);
     fixture.componentInstance.save$ = new Subject<void>();
-    fixture.componentInstance.prefillConfiguration$ = of({
-      configurationId: 'b2f4c1d0-0000-4000-8000-000000000001',
-      configurationTitle: 'Notificaties API Plugin',
-      url: 'https://opennotificaties.example.com/api/v1/',
-      callbackUrl: 'https://gzac.example.com/api/v1/notificatiesapi-manual/callback',
-      authHeader: '',
-      abonnementRegistration,
-    });
+    fixture.componentInstance.prefillConfiguration$ = of({...CONFIGURATION, configurationId});
     fixture.detectChanges();
   };
 
-  const switchToManual = (): void => {
-    fixture.componentInstance.formValueChange({
-      configurationTitle: 'Notificaties API Plugin',
-      url: 'https://opennotificaties.example.com/api/v1/',
-      callbackUrl: 'https://gzac.example.com/api/v1/notificatiesapi-manual/callback',
-      authHeader: '',
-      abonnementRegistration: 'manual',
-    } as NotificatiesApiManualPluginConfig);
-    fixture.detectChanges();
-  };
-
-  it('should offer automatic and manual abonnement registration, automatic by default', () => {
+  it('should only ask for a title and a URL', () => {
     render();
-    const registrationSelect = element('v-select[name="abonnementRegistration"]');
 
-    expect(registrationSelect).not.toBeNull();
-    expect(registrationSelect.defaultSelectionId).toBe('automatic');
-    expect(registrationSelect.items.map((item: {id: string}) => item.id)).toEqual([
-      'automatic',
-      'manual',
-    ]);
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('v-input')).map((input: Element) => input.getAttribute('name'))
+    ).toEqual(['configurationTitle', 'url']);
+    expect(element('v-select')).toBeNull();
   });
 
-  it('should keep the authentication header optional and hide the manual panel when automatic', () => {
+  it('should say before the fields that the standard plugin is configured after this one', () => {
     render();
-    const authHeader = element('v-input[name="authHeader"]');
 
-    expect(authHeader.required).toBeFalse();
-    expect(authHeader.title).toBe('authHeader');
-    expect(element('v-input[name="callbackUrl"]').required).toBeTrue();
-    expect(element('valtimo-notificaties-api-manual-plugin-manual-abonnement')).toBeNull();
+    const order = element(
+      `[data-test-id="${NOTIFICATIES_API_MANUAL_PLUGIN_CONFIGURATION_TEST_IDS.order}"]`
+    );
+    expect(order.notificationObj.type).toBe('info');
+    expect(order.notificationObj.title).toBe('orderTitle');
+    expect(order.notificationObj.message).toBe('orderMessage');
+    expect(order.compareDocumentPosition(element('v-form')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('should require the shared secret and show the manual panel when manual', () => {
-    render('manual');
-    switchToManual();
+  it('should ask to save first for a new configuration', () => {
+    render();
 
-    const authHeader = element('v-input[name="authHeader"]');
-    const panel = element('valtimo-notificaties-api-manual-plugin-manual-abonnement');
-    expect(authHeader.required).toBeTrue();
-    expect(authHeader.title).toBe('sharedSecret');
-    expect(element('v-input[name="callbackUrl"]').required).toBeFalse();
-    expect(panel).not.toBeNull();
-    expect(panel.manualAbonnement).toEqual({
-      callbackUrl: 'https://gateway.example.com/callback',
-      kanalen: [],
-    });
+    expect(element('valtimo-notificaties-api-manual-plugin-manual-abonnement').manualAbonnement).toBeNull();
   });
 
-  it('should ask to save first when an automatic configuration is switched to manual', () => {
-    render('automatic');
-    switchToManual();
+  it('should show what is still needed for a saved configuration', () => {
+    render('b2f4c1d0-0000-4000-8000-000000000001');
 
-    const panel = element('valtimo-notificaties-api-manual-plugin-manual-abonnement');
-    expect(panel).not.toBeNull();
-    expect(panel.manualAbonnement).toBeNull();
+    expect(element('valtimo-notificaties-api-manual-plugin-manual-abonnement').manualAbonnement).toEqual(
+      MANUAL_ABONNEMENT
+    );
   });
 });
